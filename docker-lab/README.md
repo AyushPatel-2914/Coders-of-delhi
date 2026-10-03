@@ -14,6 +14,7 @@ All steps below were performed on a Linux machine (user `ayushpatel`) with Docke
 | `app/index.html` | Web page served by the container (shows name and roll number) |
 | `screenshots/` | Terminal and browser screenshots for every step |
 | `Docker_Lab_Report.pdf` | This report as a PDF for submission |
+| `Docker_Lab_Report.docx` | The same report as an editable Word document |
 
 ## Steps
 
