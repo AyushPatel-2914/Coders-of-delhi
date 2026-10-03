@@ -1,0 +1,13 @@
+services:
+  web:
+    build: .
+    image: ayushpatel/docker-lab-web:1.0
+    container_name: ayushpatel-compose-web
+    ports:
+      - "8081:80"
+    volumes:
+      - web-logs:/var/log/nginx
+    restart: unless-stopped
+
+volumes:
+  web-logs:

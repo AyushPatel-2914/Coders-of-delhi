@@ -1,0 +1,659 @@
+[
+ {
+  "id": 1,
+  "title": "Check Docker installation",
+  "cmds": [
+   [
+    "docker --version",
+    "Shows the installed Docker client version, confirming Docker is installed."
+   ],
+   [
+    "docker compose version",
+    "Shows the Docker Compose plugin version (used later for multi-container deployment)."
+   ],
+   [
+    "docker info --format 'Server: {{.ServerVersion}} | Containers: {{.Containers}} | Images: {{.Images}} | OS: {{.OperatingSystem}}'",
+    "Prints key details about the Docker daemon (engine version, number of containers/images, OS) to confirm the daemon is running."
+   ]
+  ],
+  "screenshot": "step01.png",
+  "results": [
+   {
+    "cmd": "docker --version",
+    "explain": "Shows the installed Docker client version, confirming Docker is installed.",
+    "out": "Docker version 29.6.2, build dfc4efb"
+   },
+   {
+    "cmd": "docker compose version",
+    "explain": "Shows the Docker Compose plugin version (used later for multi-container deployment).",
+    "out": "Docker Compose version v5.3.1"
+   },
+   {
+    "cmd": "docker info --format 'Server: {{.ServerVersion}} | Containers: {{.Containers}} | Images: {{.Images}} | OS: {{.OperatingSystem}}'",
+    "explain": "Prints key details about the Docker daemon (engine version, number of containers/images, OS) to confirm the daemon is running.",
+    "out": "Server: 29.6.2 | Containers: 0 | Images: 0 | OS: Ubuntu 24.04.4 LTS"
+   }
+  ]
+ },
+ {
+  "id": 2,
+  "title": "Run the first container (hello-world)",
+  "cmds": [
+   [
+    "docker run hello-world",
+    "Downloads the hello-world image (if not present), creates a container from it and runs it. The container prints a message and exits - proving Docker works end to end."
+   ]
+  ],
+  "screenshot": "step02.png",
+  "results": [
+   {
+    "cmd": "docker run hello-world",
+    "explain": "Downloads the hello-world image (if not present), creates a container from it and runs it. The container prints a message and exits - proving Docker works end to end.",
+    "out": "\nHello from Docker!\nThis message shows that your installation appears to be working correctly.\n\nTo generate this message, Docker took the following steps:\n 1. The Docker client contacted the Docker daemon.\n 2. The Docker daemon pulled the \"hello-world\" image from the Docker Hub.\n    (amd64)\n 3. The Docker daemon created a new container from that image which runs the\n    executable that produces the output you are currently reading.\n 4. The Docker daemon streamed that output to the Docker client, which sent it\n    to your terminal.\n\nTo try something more ambitious, you can run an Ubuntu container with:\n $ docker run -it ubuntu bash\n\nShare images, automate workflows, and more with a free Docker ID:\n https://hub.docker.com/\n\nFor more examples and ideas, visit:\n https://docs.docker.com/get-started/\n\nUnable to find image 'hello-world:latest' locally\nlatest: Pulling from library/hello-world\n4f55086f7dd0: Pulling fs layer\n4f55086f7dd0: Download complete\nd5e71e642bf5: Download complete\n4f55086f7dd0: Pull complete\nDigest: sha256:5e23090353324d887c48ad5e5c56d294eab81588df9605b07d1afe895f9cc8f8\nStatus: Downloaded newer image for hello-world:latest"
+   }
+  ]
+ },
+ {
+  "id": 3,
+  "title": "Pull images and list them",
+  "cmds": [
+   [
+    "docker pull nginx:alpine",
+    "Downloads the official Nginx web-server image (small Alpine variant) from Docker Hub."
+   ],
+   [
+    "docker pull alpine:latest",
+    "Downloads the tiny Alpine Linux base image."
+   ],
+   [
+    "docker images",
+    "Lists all images stored locally with their repository, tag, ID and size."
+   ]
+  ],
+  "screenshot": "step03.png",
+  "results": [
+   {
+    "cmd": "docker pull nginx:alpine",
+    "explain": "Downloads the official Nginx web-server image (small Alpine variant) from Docker Hub.",
+    "out": "alpine: Pulling from library/nginx\ne72112c14215: Pulling fs layer\n745dfb2690dd: Pulling fs layer\ne76228b47809: Pulling fs layer\n9a9a644fdd6a: Pulling fs layer\nd9aae54b5831: Pulling fs layer\n6c53d0b2a666: Pulling fs layer\ne2de96513ba9: Pulling fs layer\n64c8194480fe: Pulling fs layer\n745dfb2690dd: Download complete\n64c8194480fe: Download complete\nd54d3939625e: Download complete\n9a9a644fdd6a: Download complete\n6c53d0b2a666: Download complete\n0deea27e58d9: Download complete\ne76228b47809: Download complete\ne2de96513ba9: Download complete\ne72112c14215: Download complete\nd9aae54b5831: Download complete\ne2de96513ba9: Pull complete\n745dfb2690dd: Pull complete\n64c8194480fe: Pull complete\n9a9a644fdd6a: Pull complete\n6c53d0b2a666: Pull complete\ne76228b47809: Pull complete\nd9aae54b5831: Pull complete\ne72112c14215: Pull complete\nDigest: sha256:df221db836e1754089190208cee7eeda94f233197056426eda74a43ab1abeac2\nStatus: Downloaded newer image for nginx:alpine\ndocker.io/library/nginx:alpine"
+   },
+   {
+    "cmd": "docker pull alpine:latest",
+    "explain": "Downloads the tiny Alpine Linux base image.",
+    "out": "latest: Pulling from library/alpine\n797dd00a0fc7: Download complete\n6d0606d1815c: Download complete\nDigest: sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6\nStatus: Downloaded newer image for alpine:latest\ndocker.io/library/alpine:latest"
+   },
+   {
+    "cmd": "docker images",
+    "explain": "Lists all images stored locally with their repository, tag, ID and size.",
+    "out": "IMAGE                ID             DISK USAGE   CONTENT SIZE   EXTRA\nalpine:latest        294b683cb724         13MB         3.94MB        \nhello-world:latest   5e2309035332       25.9kB         9.49kB   U    \nnginx:alpine         df221db836e1       94.4MB         27.2MB        "
+   }
+  ]
+ },
+ {
+  "id": 4,
+  "title": "Run a command inside a container",
+  "cmds": [
+   [
+    "docker run --rm alpine cat /etc/os-release",
+    "Starts an Alpine container, runs one command inside it (shows the container's OS) and removes the container afterwards (--rm)."
+   ],
+   [
+    "docker run --rm alpine sh -c 'echo Hello from Ayush Patel, Roll No 202301084; hostname'",
+    "Runs a small shell script inside a container. The hostname printed is the container ID, showing each container is an isolated environment. (Interactive form: docker run -it alpine sh)"
+   ]
+  ],
+  "screenshot": "step04.png",
+  "results": [
+   {
+    "cmd": "docker run --rm alpine cat /etc/os-release",
+    "explain": "Starts an Alpine container, runs one command inside it (shows the container's OS) and removes the container afterwards (--rm).",
+    "out": "NAME=\"Alpine Linux\"\nID=alpine\nVERSION_ID=3.24.2\nPRETTY_NAME=\"Alpine Linux v3.24\"\nHOME_URL=\"https://alpinelinux.org/\"\nBUG_REPORT_URL=\"https://gitlab.alpinelinux.org/alpine/aports/-/issues\""
+   },
+   {
+    "cmd": "docker run --rm alpine sh -c 'echo Hello from Ayush Patel, Roll No 202301084; hostname'",
+    "explain": "Runs a small shell script inside a container. The hostname printed is the container ID, showing each container is an isolated environment. (Interactive form: docker run -it alpine sh)",
+    "out": "Hello from Ayush Patel, Roll No 202301084\n16a9108abc3b"
+   }
+  ]
+ },
+ {
+  "id": 5,
+  "title": "Run a container in background with port mapping",
+  "cmds": [
+   [
+    "docker run -d --name ayushpatel-nginx -p 8080:80 nginx:alpine",
+    "Starts Nginx in detached mode (-d, background), names it ayushpatel-nginx and maps host port 8080 to container port 80 (-p)."
+   ],
+   [
+    "docker ps",
+    "Lists running containers with ID, image, status and port mappings."
+   ],
+   [
+    "curl -s http://localhost:8080 | grep -i '<title>'",
+    "Sends an HTTP request to the container through the mapped port to prove the web server is reachable."
+   ]
+  ],
+  "screenshot": "step05.png",
+  "results": [
+   {
+    "cmd": "docker run -d --name ayushpatel-nginx -p 8080:80 nginx:alpine",
+    "explain": "Starts Nginx in detached mode (-d, background), names it ayushpatel-nginx and maps host port 8080 to container port 80 (-p).",
+    "out": "67537d701112d0b339168bc93fcedacc0d9321a4bc6d57e9154982566cb85137"
+   },
+   {
+    "cmd": "docker ps",
+    "explain": "Lists running containers with ID, image, status and port mappings.",
+    "out": "CONTAINER ID   IMAGE          COMMAND                  CREATED         STATUS         PORTS                  NAMES\n67537d701112   nginx:alpine   \"/docker-entrypoint.\u2026\"   2 seconds ago   Up 2 seconds   0.0.0.0:8080->80/tcp   ayushpatel-nginx"
+   },
+   {
+    "cmd": "curl -s http://localhost:8080 | grep -i '<title>'",
+    "explain": "Sends an HTTP request to the container through the mapped port to prove the web server is reachable.",
+    "out": "<title>Welcome to nginx!</title>"
+   }
+  ]
+ },
+ {
+  "id": 6,
+  "title": "Logs, exec and inspect",
+  "cmds": [
+   [
+    "docker logs ayushpatel-nginx 2>&1 | tail -n 4",
+    "Shows the output/logs written by the container (here the last 4 lines, including our curl request)."
+   ],
+   [
+    "docker exec ayushpatel-nginx ls -l /usr/share/nginx/html",
+    "Runs a command inside the already-running container (docker exec) - here listing Nginx's web folder."
+   ],
+   [
+    "docker inspect --format 'Name={{.Name}} IP={{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}} Status={{.State.Status}}' ayushpatel-nginx",
+    "Shows low-level details of the container (name, internal IP address, state) using a Go template filter."
+   ]
+  ],
+  "screenshot": "step06.png",
+  "results": [
+   {
+    "cmd": "docker logs ayushpatel-nginx 2>&1 | tail -n 4",
+    "explain": "Shows the output/logs written by the container (here the last 4 lines, including our curl request).",
+    "out": "2026/10/03 17:11:27 [notice] 1#1: start worker process 21\n2026/10/03 17:11:27 [notice] 1#1: start worker process 22\n2026/10/03 17:11:27 [notice] 1#1: start worker process 23\n172.17.0.1 - - [03/Oct/2026:17:11:31 +0000] \"GET / HTTP/1.1\" 200 896 \"-\" \"curl/8.5.0\" \"-\""
+   },
+   {
+    "cmd": "docker exec ayushpatel-nginx ls -l /usr/share/nginx/html",
+    "explain": "Runs a command inside the already-running container (docker exec) - here listing Nginx's web folder.",
+    "out": "total 8\n-rw-r--r--    1 root     root           497 Sep 15 14:18 50x.html\n-rw-r--r--    1 root     root           896 Sep 15 14:18 index.html"
+   },
+   {
+    "cmd": "docker inspect --format 'Name={{.Name}} IP={{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}} Status={{.State.Status}}' ayushpatel-nginx",
+    "explain": "Shows low-level details of the container (name, internal IP address, state) using a Go template filter.",
+    "out": "Name=/ayushpatel-nginx IP=172.17.0.2 Status=running"
+   }
+  ]
+ },
+ {
+  "id": 7,
+  "title": "Container lifecycle: stop, start, remove",
+  "cmds": [
+   [
+    "docker stop ayushpatel-nginx",
+    "Gracefully stops the running container."
+   ],
+   [
+    "docker ps -a --filter name=ayushpatel-nginx",
+    "Lists all containers including stopped ones (-a); status is now Exited."
+   ],
+   [
+    "docker start ayushpatel-nginx",
+    "Starts the stopped container again (same container, same settings)."
+   ],
+   [
+    "docker ps --filter name=ayushpatel-nginx",
+    "Confirms the container is Up again."
+   ],
+   [
+    "docker rm -f ayushpatel-nginx",
+    "Force-removes the container (stops it first because of -f)."
+   ]
+  ],
+  "screenshot": "step07.png",
+  "results": [
+   {
+    "cmd": "docker stop ayushpatel-nginx",
+    "explain": "Gracefully stops the running container.",
+    "out": "ayushpatel-nginx"
+   },
+   {
+    "cmd": "docker ps -a --filter name=ayushpatel-nginx",
+    "explain": "Lists all containers including stopped ones (-a); status is now Exited.",
+    "out": "CONTAINER ID   IMAGE          COMMAND                  CREATED          STATUS                     PORTS     NAMES\n67537d701112   nginx:alpine   \"/docker-entrypoint.\u2026\"   16 seconds ago   Exited (0) 2 seconds ago             ayushpatel-nginx"
+   },
+   {
+    "cmd": "docker start ayushpatel-nginx",
+    "explain": "Starts the stopped container again (same container, same settings).",
+    "out": "ayushpatel-nginx"
+   },
+   {
+    "cmd": "docker ps --filter name=ayushpatel-nginx",
+    "explain": "Confirms the container is Up again.",
+    "out": "CONTAINER ID   IMAGE          COMMAND                  CREATED          STATUS         PORTS                  NAMES\n67537d701112   nginx:alpine   \"/docker-entrypoint.\u2026\"   20 seconds ago   Up 2 seconds   0.0.0.0:8080->80/tcp   ayushpatel-nginx"
+   },
+   {
+    "cmd": "docker rm -f ayushpatel-nginx",
+    "explain": "Force-removes the container (stops it first because of -f).",
+    "out": "ayushpatel-nginx"
+   }
+  ]
+ },
+ {
+  "id": 8,
+  "title": "Write a Dockerfile",
+  "cmds": [
+   [
+    "ls -R",
+    "Shows the project files: the Dockerfile, the web page in app/, and the Compose file."
+   ],
+   [
+    "cat Dockerfile",
+    "Displays the Dockerfile. FROM picks the base image, LABEL adds metadata, COPY adds our page, EXPOSE documents the port, CMD sets the start command."
+   ]
+  ],
+  "screenshot": "step08.png",
+  "results": [
+   {
+    "cmd": "ls -R",
+    "explain": "Shows the project files: the Dockerfile, the web page in app/, and the Compose file.",
+    "out": ".:\nDockerfile\napp\ndocker-compose.yml\n\n./app:\nindex.html"
+   },
+   {
+    "cmd": "cat Dockerfile",
+    "explain": "Displays the Dockerfile. FROM picks the base image, LABEL adds metadata, COPY adds our page, EXPOSE documents the port, CMD sets the start command.",
+    "out": "# Base image: lightweight Nginx web server on Alpine Linux\nFROM nginx:alpine\n\n# Metadata about the image author\nLABEL maintainer=\"Ayush Patel (202301084)\"\n\n# Copy our web page into Nginx's default web root\nCOPY app/index.html /usr/share/nginx/html/index.html\n\n# Document that the container listens on port 80\nEXPOSE 80\n\n# Start Nginx in the foreground so the container keeps running\nCMD [\"nginx\", \"-g\", \"daemon off;\"]"
+   }
+  ]
+ },
+ {
+  "id": 9,
+  "title": "Build a custom image",
+  "cmds": [
+   [
+    "docker build -t ayushpatel/docker-lab-web:1.0 .",
+    "Builds a new image from the Dockerfile in the current folder (.) and tags it (-t) as ayushpatel/docker-lab-web:1.0."
+   ],
+   [
+    "docker images ayushpatel/docker-lab-web",
+    "Lists the newly built image."
+   ],
+   [
+    "docker history ayushpatel/docker-lab-web:1.0 | head -n 6",
+    "Shows the layers of the image; the top layers correspond to our Dockerfile instructions."
+   ]
+  ],
+  "screenshot": "step09.png",
+  "results": [
+   {
+    "cmd": "docker build -t ayushpatel/docker-lab-web:1.0 .",
+    "explain": "Builds a new image from the Dockerfile in the current folder (.) and tags it (-t) as ayushpatel/docker-lab-web:1.0.",
+    "out": "#0 building with \"default\" instance using docker driver\n\n#1 [internal] load build definition from Dockerfile\n#1 transferring dockerfile: 457B done\n#1 DONE 0.0s\n\n#2 [internal] load metadata for docker.io/library/nginx:alpine\n#2 DONE 0.0s\n\n#3 [internal] load .dockerignore\n#3 transferring context: 69B done\n#3 DONE 0.0s\n\n#4 [internal] load build context\n#4 transferring context: 772B done\n#4 DONE 0.0s\n\n#5 [1/2] FROM docker.io/library/nginx:alpine@sha256:df221db836e1754089190208cee7eeda94f233197056426eda74a43ab1abeac2\n#5 resolve docker.io/library/nginx:alpine@sha256:df221db836e1754089190208cee7eeda94f233197056426eda74a43ab1abeac2 0.0s done\n#5 DONE 0.1s\n\n#6 [2/2] COPY app/index.html /usr/share/nginx/html/index.html\n#6 DONE 0.0s\n\n#7 exporting to image\n#7 exporting layers 0.1s done\n#7 exporting manifest sha256:3df15199b9fc76b1db9e245cc78f26dc9bfb8ecab5a423aa1775194b8d8c0287 done\n#7 exporting config sha256:165040795d1cae58b9b536df2775fb491f9d2169c22d745f1ef08fd488337008 done\n#7 exporting attestation manifest sha256:1a0cd188d6ab91e9b2191f2beedbc4ab614ce894c6245d322b83b3205234a9e9 0.0s done\n#7 exporting manifest list sha256:27eb71ecc9864d0f53fa57704aa94dfacbebcf390f038930bf255e16b33b1822\n#7 exporting manifest list sha256:27eb71ecc9864d0f53fa57704aa94dfacbebcf390f038930bf255e16b33b1822 done\n#7 naming to docker.io/ayushpatel/docker-lab-web:1.0 done\n#7 unpacking to docker.io/ayushpatel/docker-lab-web:1.0 0.0s done\n#7 DONE 0.2s"
+   },
+   {
+    "cmd": "docker images ayushpatel/docker-lab-web",
+    "explain": "Lists the newly built image.",
+    "out": "IMAGE                           ID             DISK USAGE   CONTENT SIZE   EXTRA\nayushpatel/docker-lab-web:1.0   27eb71ecc986       93.6MB         26.3MB        "
+   },
+   {
+    "cmd": "docker history ayushpatel/docker-lab-web:1.0 | head -n 6",
+    "explain": "Shows the layers of the image; the top layers correspond to our Dockerfile instructions.",
+    "out": "IMAGE          CREATED         CREATED BY                                      SIZE      COMMENT\n27eb71ecc986   4 seconds ago   CMD [\"nginx\" \"-g\" \"daemon off;\"]                0B        buildkit.dockerfile.v0\n<missing>      4 seconds ago   EXPOSE [80/tcp]                                 0B        buildkit.dockerfile.v0\n<missing>      4 seconds ago   COPY app/index.html /usr/share/nginx/html/in\u2026   24.6kB    buildkit.dockerfile.v0\n<missing>      4 seconds ago   LABEL maintainer=Ayush Patel (202301084)        0B        buildkit.dockerfile.v0\n<missing>      10 days ago     RUN /bin/sh -c set -x     && apkArch=\"$(cat \u2026   52.4MB    buildkit.dockerfile.v0"
+   }
+  ]
+ },
+ {
+  "id": 10,
+  "title": "Run the custom image (deployment)",
+  "cmds": [
+   [
+    "docker run -d --name ayushpatel-web -p 8082:80 ayushpatel/docker-lab-web:1.0",
+    "Deploys our own image as a container on host port 8082."
+   ],
+   [
+    "docker ps --filter name=ayushpatel-web",
+    "Confirms the container is running."
+   ],
+   [
+    "curl -s http://localhost:8082 | grep -E 'Name|Roll'",
+    "Fetches the page from the container - it shows my name and roll number, proving the custom image works."
+   ]
+  ],
+  "screenshot": "step10.png",
+  "results": [
+   {
+    "cmd": "docker run -d --name ayushpatel-web -p 8082:80 ayushpatel/docker-lab-web:1.0",
+    "explain": "Deploys our own image as a container on host port 8082.",
+    "out": "5f83be4e3030cfc85b2e3e875f577b4ba0c70bb5d6d2abce50e8086d49f029a9"
+   },
+   {
+    "cmd": "docker ps --filter name=ayushpatel-web",
+    "explain": "Confirms the container is running.",
+    "out": "CONTAINER ID   IMAGE                           COMMAND                  CREATED         STATUS         PORTS                  NAMES\n5f83be4e3030   ayushpatel/docker-lab-web:1.0   \"/docker-entrypoint.\u2026\"   2 seconds ago   Up 2 seconds   0.0.0.0:8082->80/tcp   ayushpatel-web"
+   },
+   {
+    "cmd": "curl -s http://localhost:8082 | grep -E 'Name|Roll'",
+    "explain": "Fetches the page from the container - it shows my name and roll number, proving the custom image works.",
+    "out": "    <p><b>Name:</b> Ayush Patel</p>\n    <p><b>Roll No:</b> 202301084</p>"
+   }
+  ]
+ },
+ {
+  "id": 11,
+  "title": "Named volumes (persistent data)",
+  "cmds": [
+   [
+    "docker volume create ayush-data",
+    "Creates a named volume - storage managed by Docker that lives outside any container."
+   ],
+   [
+    "docker volume ls",
+    "Lists all volumes."
+   ],
+   [
+    "docker run --rm -v ayush-data:/data alpine sh -c \"echo 'Ayush Patel - 202301084' > /data/student.txt\"",
+    "Container #1 mounts the volume at /data and writes a file, then is deleted (--rm)."
+   ],
+   [
+    "docker run --rm -v ayush-data:/data alpine cat /data/student.txt",
+    "Container #2 (a brand new one) mounts the same volume and reads the file - data persisted after container #1 was removed."
+   ],
+   [
+    "docker volume inspect ayush-data",
+    "Shows volume details such as where Docker stores it on the host (Mountpoint)."
+   ]
+  ],
+  "screenshot": "step11.png",
+  "results": [
+   {
+    "cmd": "docker volume create ayush-data",
+    "explain": "Creates a named volume - storage managed by Docker that lives outside any container.",
+    "out": "ayush-data"
+   },
+   {
+    "cmd": "docker volume ls",
+    "explain": "Lists all volumes.",
+    "out": "DRIVER    VOLUME NAME\nlocal     ayush-data"
+   },
+   {
+    "cmd": "docker run --rm -v ayush-data:/data alpine sh -c \"echo 'Ayush Patel - 202301084' > /data/student.txt\"",
+    "explain": "Container #1 mounts the volume at /data and writes a file, then is deleted (--rm).",
+    "out": ""
+   },
+   {
+    "cmd": "docker run --rm -v ayush-data:/data alpine cat /data/student.txt",
+    "explain": "Container #2 (a brand new one) mounts the same volume and reads the file - data persisted after container #1 was removed.",
+    "out": "Ayush Patel - 202301084"
+   },
+   {
+    "cmd": "docker volume inspect ayush-data",
+    "explain": "Shows volume details such as where Docker stores it on the host (Mountpoint).",
+    "out": "[\n    {\n        \"CreatedAt\": \"2026-10-03T17:12:10Z\",\n        \"Driver\": \"local\",\n        \"Labels\": null,\n        \"Mountpoint\": \"/var/lib/docker/volumes/ayush-data/_data\",\n        \"Name\": \"ayush-data\",\n        \"Options\": null,\n        \"Scope\": \"local\"\n    }\n]"
+   }
+  ]
+ },
+ {
+  "id": 12,
+  "title": "Bind mount (host folder into container)",
+  "cmds": [
+   [
+    "mkdir -p site && echo '<h1>Bind mount page by Ayush Patel (202301084)</h1>' > site/index.html",
+    "Creates a folder on the host with a simple HTML page."
+   ],
+   [
+    "docker run -d --name ayushpatel-bind -p 8083:80 -v \"$(pwd)/site\":/usr/share/nginx/html:ro nginx:alpine",
+    "Runs Nginx and mounts the host folder into the container's web root (read-only, :ro)."
+   ],
+   [
+    "curl -s http://localhost:8083",
+    "The container serves the host file."
+   ],
+   [
+    "echo '<h1>Updated on the host - no rebuild needed!</h1>' > site/index.html && curl -s http://localhost:8083",
+    "Edit the file on the host; the container immediately serves the new content because it is the same folder."
+   ]
+  ],
+  "screenshot": "step12.png",
+  "results": [
+   {
+    "cmd": "mkdir -p site && echo '<h1>Bind mount page by Ayush Patel (202301084)</h1>' > site/index.html",
+    "explain": "Creates a folder on the host with a simple HTML page.",
+    "out": ""
+   },
+   {
+    "cmd": "docker run -d --name ayushpatel-bind -p 8083:80 -v \"$(pwd)/site\":/usr/share/nginx/html:ro nginx:alpine",
+    "explain": "Runs Nginx and mounts the host folder into the container's web root (read-only, :ro).",
+    "out": "425bfb6d57f9b6373ffecc9fc65aa7bb2dbb46df8985291c6bd260882bbb7ee8"
+   },
+   {
+    "cmd": "curl -s http://localhost:8083",
+    "explain": "The container serves the host file.",
+    "out": "<h1>Bind mount page by Ayush Patel (202301084)</h1>"
+   },
+   {
+    "cmd": "echo '<h1>Updated on the host - no rebuild needed!</h1>' > site/index.html && curl -s http://localhost:8083",
+    "explain": "Edit the file on the host; the container immediately serves the new content because it is the same folder.",
+    "out": "<h1>Updated on the host - no rebuild needed!</h1>"
+   }
+  ]
+ },
+ {
+  "id": 13,
+  "title": "Docker networks",
+  "cmds": [
+   [
+    "docker network create ayush-net",
+    "Creates a user-defined bridge network so containers can talk to each other by name."
+   ],
+   [
+    "docker run -d --name ayush-server --network ayush-net nginx:alpine",
+    "Starts a web server container attached to the network."
+   ],
+   [
+    "docker run --rm --network ayush-net alpine wget -qO- http://ayush-server | grep -i '<title>'",
+    "A second container on the same network reaches the server using its container name (built-in DNS)."
+   ],
+   [
+    "docker network ls",
+    "Lists networks (bridge, host, none and our ayush-net)."
+   ]
+  ],
+  "screenshot": "step13.png",
+  "results": [
+   {
+    "cmd": "docker network create ayush-net",
+    "explain": "Creates a user-defined bridge network so containers can talk to each other by name.",
+    "out": "8fa69a67150f5b3624e02102a285cf6fa45e0587e5bbc6ae999fea7942d0188d"
+   },
+   {
+    "cmd": "docker run -d --name ayush-server --network ayush-net nginx:alpine",
+    "explain": "Starts a web server container attached to the network.",
+    "out": "dba03ae596d2215929436576e61c096cd12f4996c1a83af82e53cdc132882e21"
+   },
+   {
+    "cmd": "docker run --rm --network ayush-net alpine wget -qO- http://ayush-server | grep -i '<title>'",
+    "explain": "A second container on the same network reaches the server using its container name (built-in DNS).",
+    "out": "<title>Welcome to nginx!</title>"
+   },
+   {
+    "cmd": "docker network ls",
+    "explain": "Lists networks (bridge, host, none and our ayush-net).",
+    "out": "NETWORK ID     NAME        DRIVER    SCOPE\n8fa69a67150f   ayush-net   bridge    local\n64d61954f294   bridge      bridge    local\nf4eee35c36b5   host        host      local\n62647d20a688   none        null      local"
+   }
+  ]
+ },
+ {
+  "id": 14,
+  "title": "Tag and save an image",
+  "cmds": [
+   [
+    "docker tag ayushpatel/docker-lab-web:1.0 ayushpatel/docker-lab-web:latest",
+    "Adds another tag (name) to the same image - this is how images are prepared for pushing to a registry (docker login + docker push)."
+   ],
+   [
+    "docker images ayushpatel/docker-lab-web",
+    "Both tags point to the same IMAGE ID."
+   ],
+   [
+    "docker save -o docker-lab-web.tar ayushpatel/docker-lab-web:1.0 && ls -lh docker-lab-web.tar",
+    "Exports the image to a .tar file so it can be copied to another machine and loaded with docker load."
+   ]
+  ],
+  "screenshot": "step14.png",
+  "results": [
+   {
+    "cmd": "docker tag ayushpatel/docker-lab-web:1.0 ayushpatel/docker-lab-web:latest",
+    "explain": "Adds another tag (name) to the same image - this is how images are prepared for pushing to a registry (docker login + docker push).",
+    "out": ""
+   },
+   {
+    "cmd": "docker images ayushpatel/docker-lab-web",
+    "explain": "Both tags point to the same IMAGE ID.",
+    "out": "IMAGE                              ID             DISK USAGE   CONTENT SIZE   EXTRA\nayushpatel/docker-lab-web:1.0      27eb71ecc986       93.6MB         26.3MB   U    \nayushpatel/docker-lab-web:latest   27eb71ecc986       93.6MB         26.3MB   U    "
+   },
+   {
+    "cmd": "docker save -o docker-lab-web.tar ayushpatel/docker-lab-web:1.0 && ls -lh docker-lab-web.tar",
+    "explain": "Exports the image to a .tar file so it can be copied to another machine and loaded with docker load.",
+    "out": "-rw------- 1 ayushpatel ayushpatel 26M Oct  3 17:12 docker-lab-web.tar"
+   }
+  ]
+ },
+ {
+  "id": 15,
+  "title": "Deploy with Docker Compose",
+  "cmds": [
+   [
+    "cat docker-compose.yml",
+    "Shows the Compose file: one service built from our Dockerfile, port 8081, and a named volume for Nginx logs."
+   ],
+   [
+    "docker compose up -d --build",
+    "Builds the image and starts all services in the background with a single command."
+   ],
+   [
+    "docker compose ps",
+    "Lists the containers managed by this Compose project."
+   ],
+   [
+    "curl -s http://localhost:8081 | grep -E 'Name|Roll'",
+    "Verifies the Compose deployment is serving the page."
+   ]
+  ],
+  "screenshot": "step15.png",
+  "results": [
+   {
+    "cmd": "cat docker-compose.yml",
+    "explain": "Shows the Compose file: one service built from our Dockerfile, port 8081, and a named volume for Nginx logs.",
+    "out": "services:\n  web:\n    build: .\n    image: ayushpatel/docker-lab-web:1.0\n    container_name: ayushpatel-compose-web\n    ports:\n      - \"8081:80\"\n    volumes:\n      - web-logs:/var/log/nginx\n    restart: unless-stopped\n\nvolumes:\n  web-logs:"
+   },
+   {
+    "cmd": "docker compose up -d --build",
+    "explain": "Builds the image and starts all services in the background with a single command.",
+    "out": "#1 [internal] load local bake definitions\n#1 reading from stdin 515B done\n#1 DONE 0.0s\n\n#2 [internal] load build definition from Dockerfile\n#2 transferring dockerfile: 457B done\n#2 DONE 0.0s\n\n#3 [internal] load metadata for docker.io/library/nginx:alpine\n#3 DONE 0.0s\n\n#4 [internal] load .dockerignore\n#4 transferring context: 69B done\n#4 DONE 0.0s\n\n#5 [internal] load build context\n#5 transferring context: 59B done\n#5 DONE 0.0s\n\n#6 [1/2] FROM docker.io/library/nginx:alpine@sha256:df221db836e1754089190208cee7eeda94f233197056426eda74a43ab1abeac2\n#6 resolve docker.io/library/nginx:alpine@sha256:df221db836e1754089190208cee7eeda94f233197056426eda74a43ab1abeac2 0.0s done\n#6 DONE 0.0s\n\n#7 [2/2] COPY app/index.html /usr/share/nginx/html/index.html\n#7 CACHED\n\n#8 exporting to image\n#8 exporting layers done\n#8 exporting manifest sha256:de47fb02a8730260567bef3bbfa36e375924000e4e679531a7441ac964e7460a done\n#8 exporting config sha256:d9ec8d2e24d0ba138d091a6e5b485c2f67b8f9e1c45ee5ae44eeeeef3c28a049 done\n#8 exporting attestation manifest sha256:9b58ca490ddabb1fdd1c247ef4dd8f5e65fb7af02fce68da73873c1a19229deb 0.0s done\n#8 exporting manifest list sha256:23f032642132e1b403f7d274f2eb443578dcbc554ebb3c2a53f4a15696650032 done\n#8 naming to docker.io/ayushpatel/docker-lab-web:1.0 done\n#8 unpacking to docker.io/ayushpatel/docker-lab-web:1.0 0.0s done\n#8 DONE 0.1s\n\n#9 resolving provenance for metadata file\n#9 DONE 0.0s\n Image ayushpatel/docker-lab-web:1.0 Building \n Image ayushpatel/docker-lab-web:1.0 Built \n Network docker-lab_default Creating \n Network docker-lab_default Created \n Volume docker-lab_web-logs Creating \n Volume docker-lab_web-logs Created \n Container ayushpatel-compose-web Creating \n Container ayushpatel-compose-web Created \n Container ayushpatel-compose-web Starting \n Container ayushpatel-compose-web Started "
+   },
+   {
+    "cmd": "docker compose ps",
+    "explain": "Lists the containers managed by this Compose project.",
+    "out": "NAME                     IMAGE                           COMMAND                  SERVICE   CREATED         STATUS         PORTS\nayushpatel-compose-web   ayushpatel/docker-lab-web:1.0   \"/docker-entrypoint.\u2026\"   web       2 seconds ago   Up 2 seconds   0.0.0.0:8081->80/tcp"
+   },
+   {
+    "cmd": "curl -s http://localhost:8081 | grep -E 'Name|Roll'",
+    "explain": "Verifies the Compose deployment is serving the page.",
+    "out": "    <p><b>Name:</b> Ayush Patel</p>\n    <p><b>Roll No:</b> 202301084</p>"
+   }
+  ]
+ },
+ {
+  "id": 16,
+  "title": "Monitoring: stats and compose logs",
+  "cmds": [
+   [
+    "docker stats --no-stream --format 'table {{.Name}}\\t{{.CPUPerc}}\\t{{.MemUsage}}'",
+    "Shows a one-time snapshot of CPU and memory usage of running containers."
+   ],
+   [
+    "docker compose logs --tail 3",
+    "Shows the last log lines of the Compose services."
+   ],
+   [
+    "docker system df",
+    "Shows how much disk space images, containers and volumes use."
+   ]
+  ],
+  "screenshot": "step16.png",
+  "results": [
+   {
+    "cmd": "docker stats --no-stream --format 'table {{.Name}}\\t{{.CPUPerc}}\\t{{.MemUsage}}'",
+    "explain": "Shows a one-time snapshot of CPU and memory usage of running containers.",
+    "out": "NAME                     CPU %     MEM USAGE / LIMIT\nayushpatel-compose-web   0.00%     5.137MiB / 15.72GiB\nayush-server             0.00%     4.617MiB / 15.72GiB\nayushpatel-bind          0.00%     4.582MiB / 15.72GiB\nayushpatel-web           0.00%     4.617MiB / 15.72GiB"
+   },
+   {
+    "cmd": "docker compose logs --tail 3",
+    "explain": "Shows the last log lines of the Compose services.",
+    "out": "ayushpatel-compose-web  | 2026/10/03 17:12:51 [notice] 1#1: start worker process 22\nayushpatel-compose-web  | 2026/10/03 17:12:51 [notice] 1#1: start worker process 23\nayushpatel-compose-web  | 172.19.0.1 - - [03/Oct/2026:17:12:56 +0000] \"GET / HTTP/1.1\" 200 702 \"-\" \"curl/8.5.0\" \"-\""
+   },
+   {
+    "cmd": "docker system df",
+    "explain": "Shows how much disk space images, containers and volumes use.",
+    "out": "TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE\nImages          5         4         94.64MB   88.02kB (0%)\nContainers      5         4         217.1kB   4.096kB (1%)\nLocal Volumes   2         1         46B       24B (52%)\nBuild Cache     12        0         26.38MB   28.67kB"
+   }
+  ]
+ },
+ {
+  "id": 17,
+  "title": "Clean up",
+  "cmds": [
+   [
+    "docker compose down -v",
+    "Stops and removes the Compose containers, network and volume (-v)."
+   ],
+   [
+    "docker rm -f ayushpatel-web ayushpatel-bind ayush-server",
+    "Removes the remaining containers."
+   ],
+   [
+    "docker network rm ayush-net && docker volume rm ayush-data",
+    "Removes the custom network and volume."
+   ],
+   [
+    "docker container prune -f",
+    "Deletes all stopped containers (e.g. the hello-world one)."
+   ],
+   [
+    "docker ps -a",
+    "Confirms no containers are left."
+   ]
+  ],
+  "screenshot": "step17.png",
+  "results": [
+   {
+    "cmd": "docker compose down -v",
+    "explain": "Stops and removes the Compose containers, network and volume (-v).",
+    "out": " Container ayushpatel-compose-web Stopping \n Container ayushpatel-compose-web Stopped \n Container ayushpatel-compose-web Removing \n Container ayushpatel-compose-web Removed \n Network docker-lab_default Removing \n Volume docker-lab_web-logs Removing \n Volume docker-lab_web-logs Removed \n Network docker-lab_default Removed "
+   },
+   {
+    "cmd": "docker rm -f ayushpatel-web ayushpatel-bind ayush-server",
+    "explain": "Removes the remaining containers.",
+    "out": "ayushpatel-web\nayushpatel-bind\nayush-server"
+   },
+   {
+    "cmd": "docker network rm ayush-net && docker volume rm ayush-data",
+    "explain": "Removes the custom network and volume.",
+    "out": "ayush-net\nayush-data"
+   },
+   {
+    "cmd": "docker container prune -f",
+    "explain": "Deletes all stopped containers (e.g. the hello-world one).",
+    "out": "Deleted Containers:\n16466151dbdd353cd05f20646176b73ae02dc27b4a0a7f2119521e63672dc51b\n\nTotal reclaimed space: 4.096kB"
+   },
+   {
+    "cmd": "docker ps -a",
+    "explain": "Confirms no containers are left.",
+    "out": "CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES"
+   }
+  ]
+ }
+]

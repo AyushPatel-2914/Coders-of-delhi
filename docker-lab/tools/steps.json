@@ -1,0 +1,328 @@
+[
+ {
+  "id": 1,
+  "title": "Check Docker installation",
+  "cmds": [
+   [
+    "docker --version",
+    "Shows the installed Docker client version, confirming Docker is installed."
+   ],
+   [
+    "docker compose version",
+    "Shows the Docker Compose plugin version (used later for multi-container deployment)."
+   ],
+   [
+    "docker info --format 'Server: {{.ServerVersion}} | Containers: {{.Containers}} | Images: {{.Images}} | OS: {{.OperatingSystem}}'",
+    "Prints key details about the Docker daemon (engine version, number of containers/images, OS) to confirm the daemon is running."
+   ]
+  ]
+ },
+ {
+  "id": 2,
+  "title": "Run the first container (hello-world)",
+  "cmds": [
+   [
+    "docker run hello-world",
+    "Downloads the hello-world image (if not present), creates a container from it and runs it. The container prints a message and exits - proving Docker works end to end."
+   ]
+  ]
+ },
+ {
+  "id": 3,
+  "title": "Pull images and list them",
+  "cmds": [
+   [
+    "docker pull nginx:alpine",
+    "Downloads the official Nginx web-server image (small Alpine variant) from Docker Hub."
+   ],
+   [
+    "docker pull alpine:latest",
+    "Downloads the tiny Alpine Linux base image."
+   ],
+   [
+    "docker images",
+    "Lists all images stored locally with their repository, tag, ID and size."
+   ]
+  ]
+ },
+ {
+  "id": 4,
+  "title": "Run a command inside a container",
+  "cmds": [
+   [
+    "docker run --rm alpine cat /etc/os-release",
+    "Starts an Alpine container, runs one command inside it (shows the container's OS) and removes the container afterwards (--rm)."
+   ],
+   [
+    "docker run --rm alpine sh -c 'echo Hello from Ayush Patel, Roll No 202301084; hostname'",
+    "Runs a small shell script inside a container. The hostname printed is the container ID, showing each container is an isolated environment. (Interactive form: docker run -it alpine sh)"
+   ]
+  ]
+ },
+ {
+  "id": 5,
+  "title": "Run a container in background with port mapping",
+  "cmds": [
+   [
+    "docker run -d --name ayushpatel-nginx -p 8080:80 nginx:alpine",
+    "Starts Nginx in detached mode (-d, background), names it ayushpatel-nginx and maps host port 8080 to container port 80 (-p)."
+   ],
+   [
+    "docker ps",
+    "Lists running containers with ID, image, status and port mappings."
+   ],
+   [
+    "curl -s http://localhost:8080 | grep -i '<title>'",
+    "Sends an HTTP request to the container through the mapped port to prove the web server is reachable."
+   ]
+  ]
+ },
+ {
+  "id": 6,
+  "title": "Logs, exec and inspect",
+  "cmds": [
+   [
+    "docker logs ayushpatel-nginx 2>&1 | tail -n 4",
+    "Shows the output/logs written by the container (here the last 4 lines, including our curl request)."
+   ],
+   [
+    "docker exec ayushpatel-nginx ls -l /usr/share/nginx/html",
+    "Runs a command inside the already-running container (docker exec) - here listing Nginx's web folder."
+   ],
+   [
+    "docker inspect --format 'Name={{.Name}} IP={{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}} Status={{.State.Status}}' ayushpatel-nginx",
+    "Shows low-level details of the container (name, internal IP address, state) using a Go template filter."
+   ]
+  ]
+ },
+ {
+  "id": 7,
+  "title": "Container lifecycle: stop, start, remove",
+  "cmds": [
+   [
+    "docker stop ayushpatel-nginx",
+    "Gracefully stops the running container."
+   ],
+   [
+    "docker ps -a --filter name=ayushpatel-nginx",
+    "Lists all containers including stopped ones (-a); status is now Exited."
+   ],
+   [
+    "docker start ayushpatel-nginx",
+    "Starts the stopped container again (same container, same settings)."
+   ],
+   [
+    "docker ps --filter name=ayushpatel-nginx",
+    "Confirms the container is Up again."
+   ],
+   [
+    "docker rm -f ayushpatel-nginx",
+    "Force-removes the container (stops it first because of -f)."
+   ]
+  ]
+ },
+ {
+  "id": 8,
+  "title": "Write a Dockerfile",
+  "cmds": [
+   [
+    "ls -R",
+    "Shows the project files: the Dockerfile, the web page in app/, and the Compose file."
+   ],
+   [
+    "cat Dockerfile",
+    "Displays the Dockerfile. FROM picks the base image, LABEL adds metadata, COPY adds our page, EXPOSE documents the port, CMD sets the start command."
+   ]
+  ]
+ },
+ {
+  "id": 9,
+  "title": "Build a custom image",
+  "cmds": [
+   [
+    "docker build -t ayushpatel/docker-lab-web:1.0 .",
+    "Builds a new image from the Dockerfile in the current folder (.) and tags it (-t) as ayushpatel/docker-lab-web:1.0."
+   ],
+   [
+    "docker images ayushpatel/docker-lab-web",
+    "Lists the newly built image."
+   ],
+   [
+    "docker history ayushpatel/docker-lab-web:1.0 | head -n 6",
+    "Shows the layers of the image; the top layers correspond to our Dockerfile instructions."
+   ]
+  ]
+ },
+ {
+  "id": 10,
+  "title": "Run the custom image (deployment)",
+  "cmds": [
+   [
+    "docker run -d --name ayushpatel-web -p 8082:80 ayushpatel/docker-lab-web:1.0",
+    "Deploys our own image as a container on host port 8082."
+   ],
+   [
+    "docker ps --filter name=ayushpatel-web",
+    "Confirms the container is running."
+   ],
+   [
+    "curl -s http://localhost:8082 | grep -E 'Name|Roll'",
+    "Fetches the page from the container - it shows my name and roll number, proving the custom image works."
+   ]
+  ]
+ },
+ {
+  "id": 11,
+  "title": "Named volumes (persistent data)",
+  "cmds": [
+   [
+    "docker volume create ayush-data",
+    "Creates a named volume - storage managed by Docker that lives outside any container."
+   ],
+   [
+    "docker volume ls",
+    "Lists all volumes."
+   ],
+   [
+    "docker run --rm -v ayush-data:/data alpine sh -c \"echo 'Ayush Patel - 202301084' > /data/student.txt\"",
+    "Container #1 mounts the volume at /data and writes a file, then is deleted (--rm)."
+   ],
+   [
+    "docker run --rm -v ayush-data:/data alpine cat /data/student.txt",
+    "Container #2 (a brand new one) mounts the same volume and reads the file - data persisted after container #1 was removed."
+   ],
+   [
+    "docker volume inspect ayush-data",
+    "Shows volume details such as where Docker stores it on the host (Mountpoint)."
+   ]
+  ]
+ },
+ {
+  "id": 12,
+  "title": "Bind mount (host folder into container)",
+  "cmds": [
+   [
+    "mkdir -p site && echo '<h1>Bind mount page by Ayush Patel (202301084)</h1>' > site/index.html",
+    "Creates a folder on the host with a simple HTML page."
+   ],
+   [
+    "docker run -d --name ayushpatel-bind -p 8083:80 -v \"$(pwd)/site\":/usr/share/nginx/html:ro nginx:alpine",
+    "Runs Nginx and mounts the host folder into the container's web root (read-only, :ro)."
+   ],
+   [
+    "curl -s http://localhost:8083",
+    "The container serves the host file."
+   ],
+   [
+    "echo '<h1>Updated on the host - no rebuild needed!</h1>' > site/index.html && curl -s http://localhost:8083",
+    "Edit the file on the host; the container immediately serves the new content because it is the same folder."
+   ]
+  ]
+ },
+ {
+  "id": 13,
+  "title": "Docker networks",
+  "cmds": [
+   [
+    "docker network create ayush-net",
+    "Creates a user-defined bridge network so containers can talk to each other by name."
+   ],
+   [
+    "docker run -d --name ayush-server --network ayush-net nginx:alpine",
+    "Starts a web server container attached to the network."
+   ],
+   [
+    "docker run --rm --network ayush-net alpine wget -qO- http://ayush-server | grep -i '<title>'",
+    "A second container on the same network reaches the server using its container name (built-in DNS)."
+   ],
+   [
+    "docker network ls",
+    "Lists networks (bridge, host, none and our ayush-net)."
+   ]
+  ]
+ },
+ {
+  "id": 14,
+  "title": "Tag and save an image",
+  "cmds": [
+   [
+    "docker tag ayushpatel/docker-lab-web:1.0 ayushpatel/docker-lab-web:latest",
+    "Adds another tag (name) to the same image - this is how images are prepared for pushing to a registry (docker login + docker push)."
+   ],
+   [
+    "docker images ayushpatel/docker-lab-web",
+    "Both tags point to the same IMAGE ID."
+   ],
+   [
+    "docker save -o docker-lab-web.tar ayushpatel/docker-lab-web:1.0 && ls -lh docker-lab-web.tar",
+    "Exports the image to a .tar file so it can be copied to another machine and loaded with docker load."
+   ]
+  ]
+ },
+ {
+  "id": 15,
+  "title": "Deploy with Docker Compose",
+  "cmds": [
+   [
+    "cat docker-compose.yml",
+    "Shows the Compose file: one service built from our Dockerfile, port 8081, and a named volume for Nginx logs."
+   ],
+   [
+    "docker compose up -d --build",
+    "Builds the image and starts all services in the background with a single command."
+   ],
+   [
+    "docker compose ps",
+    "Lists the containers managed by this Compose project."
+   ],
+   [
+    "curl -s http://localhost:8081 | grep -E 'Name|Roll'",
+    "Verifies the Compose deployment is serving the page."
+   ]
+  ]
+ },
+ {
+  "id": 16,
+  "title": "Monitoring: stats and compose logs",
+  "cmds": [
+   [
+    "docker stats --no-stream --format 'table {{.Name}}\\t{{.CPUPerc}}\\t{{.MemUsage}}'",
+    "Shows a one-time snapshot of CPU and memory usage of running containers."
+   ],
+   [
+    "docker compose logs --tail 3",
+    "Shows the last log lines of the Compose services."
+   ],
+   [
+    "docker system df",
+    "Shows how much disk space images, containers and volumes use."
+   ]
+  ]
+ },
+ {
+  "id": 17,
+  "title": "Clean up",
+  "cmds": [
+   [
+    "docker compose down -v",
+    "Stops and removes the Compose containers, network and volume (-v)."
+   ],
+   [
+    "docker rm -f ayushpatel-web ayushpatel-bind ayush-server",
+    "Removes the remaining containers."
+   ],
+   [
+    "docker network rm ayush-net && docker volume rm ayush-data",
+    "Removes the custom network and volume."
+   ],
+   [
+    "docker container prune -f",
+    "Deletes all stopped containers (e.g. the hello-world one)."
+   ],
+   [
+    "docker ps -a",
+    "Confirms no containers are left."
+   ]
+  ]
+ }
+]
