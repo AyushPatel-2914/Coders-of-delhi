@@ -8,7 +8,7 @@ SHOTS = os.path.join(REPO, "screenshots")
 WORK = "/home/ayushpatel/docker-lab"
 USER, HOST = "ayushpatel", "docker-lab"
 MAX_LINES = 44          # long outputs are trimmed (clearly marked)
-WRAP = 140
+WRAP = 118
 
 F = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
 FB = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf"
@@ -40,24 +40,27 @@ def render(step, results, path):
         rows += [("out", l) for l in trim(out)] if out else []
     rows.append(("cmd", ""))
     lh, pad, bar = 20, 16, 34
-    W = 1310
+    W = 1180
     H = bar + pad * 2 + lh * len(rows)
-    img = Image.new("RGB", (W, H), "#000000")
+    img = Image.new("RGB", (W, H), "#1e1e1e")
     d = ImageDraw.Draw(img)
-    d.rectangle([0, 0, W, bar], fill="#ffffff", outline="#000000")
+    d.rectangle([0, 0, W, bar], fill="#3a3a3a")
+    for i, c in enumerate(["#ff5f56", "#ffbd2e", "#27c93f"]):
+        d.ellipse([14 + i*22, 11, 26 + i*22, 23], fill=c)
     title = f"{USER}@{HOST}: ~/docker-lab   —   Step {step['id']}: {step['title']}"
-    d.text((14, 9), title, font=font, fill="#000000")
+    d.text((90, 9), title, font=font, fill="#dddddd")
     y = bar + pad
     for kind, text in rows:
         x = pad
         if kind == "cmd":
-            for seg, col in [(f"{USER}@{HOST}:~/docker-lab$ ", "#ffffff")]:
+            for seg, col in [(f"{USER}@{HOST}", "#4ec94e"), (":", "#ffffff"),
+                             ("~/docker-lab", "#5c9cf5"), ("$ ", "#ffffff")]:
                 d.text((x, y), seg, font=bold, fill=col); x += d.textlength(seg, font=bold)
             d.text((x, y), text, font=font, fill="#ffffff")
         elif kind == "cont":
             d.text((x, y), text, font=font, fill="#ffffff")
         else:
-            d.text((x, y), text, font=font, fill="#ffffff")
+            d.text((x, y), text, font=font, fill="#cccccc")
         y += lh
     img.save(path)
 

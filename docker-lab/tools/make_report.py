@@ -39,15 +39,15 @@ open(os.path.join(REPO, "README.md"), "w").write("\n".join(md))
 # ---------- PDF (HTML -> Chromium print) ----------
 e = html.escape
 h = [f"""<!doctype html><html><head><meta charset="utf-8"><title>Docker Lab - {NAME}</title><style>
-body{{font-family:"Times New Roman",serif;font-size:13px;color:#000;margin:0}}
+body{{font-family:Arial,sans-serif;font-size:12px;color:#222;margin:0}}
 .cover{{height:95vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}}
 .cover h1{{font-size:36px;color:#000;margin:0 0 10px}} .cover p{{font-size:18px;margin:4px}}
-h2{{color:#000;border-bottom:1px solid #000;padding-bottom:4px;margin-top:0}}
+h2{{color:#000;border-bottom:2px solid #000;padding-bottom:4px;margin-top:0}}
 .step{{page-break-before:always}} table{{border-collapse:collapse;width:100%;margin-bottom:10px}}
-td,th{{border:1px solid #000;padding:5px;vertical-align:top;text-align:left}} th{{background:#fff}}
+td,th{{border:1px solid #bbb;padding:5px;vertical-align:top;text-align:left}} th{{background:#fff}}
 td code{{font-family:monospace;font-size:11px;word-break:break-all}} td:first-child{{width:45%}}
-img{{max-width:100%;border:1px solid #000;margin:6px 0}} pre{{background:#fff;padding:8px;font-size:11px;border:1px solid #000}}
-.cap{{font-style:italic;color:#000}}</style></head><body>
+img{{max-width:100%;border:1px solid #999;margin:6px 0}} pre{{background:#f4f4f4;padding:8px;font-size:11px;border:1px solid #ddd}}
+.cap{{font-style:italic;color:#555}}</style></head><body>
 <div class="cover"><h1>Docker Lab Submission</h1><p><b>Name:</b> {NAME}</p><p><b>Roll No:</b> {ROLL}</p>
 <p style="font-size:14px;max-width:600px;margin-top:30px">{e(INTRO.replace('`',''))}</p></div>
 <div class="step"><h2>Project Files</h2>"""]
