@@ -1,0 +1,666 @@
+
+==================== SETUP: check tools ====================
+
+ayush@ubuntu:~$ docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+
+ayush@ubuntu:~$ kubectl version --client
+Client Version: v1.37.1
+Kustomize Version: v5.8.1
+
+ayush@ubuntu:~$ kind version
+kind v0.30.0 go1.24.6 linux/amd64
+
+ayush@ubuntu:~$ mkdir -p ~/k8s-lab && cd ~/k8s-lab && pwd
+/home/ayush/k8s-lab
+
+
+==================== SETUP: build the cluster ====================
+
+ayush@ubuntu:~/k8s-lab$ {
+  echo 'kind: Cluster'
+  echo 'apiVersion: kind.x-k8s.io/v1alpha4'
+  echo 'name: k8s-lab'
+  echo 'nodes:'
+  echo '  - role: control-plane'
+  echo '    extraPortMappings:'
+  for p in $(seq 30000 30050); do
+    echo "      - containerPort: $p"
+    echo "        hostPort: $p"
+    echo "        protocol: TCP"
+  done
+  echo '  - role: worker'
+  echo '  - role: worker'
+} > kind-config.yaml
+
+ayush@ubuntu:~/k8s-lab$ head -12 kind-config.yaml; echo ...; tail -4 kind-config.yaml
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: k8s-lab
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30000
+        hostPort: 30000
+        protocol: TCP
+      - containerPort: 30001
+        hostPort: 30001
+        protocol: TCP
+...
+        hostPort: 30050
+        protocol: TCP
+  - role: worker
+  - role: worker
+
+ayush@ubuntu:~/k8s-lab$ kind create cluster --config kind-config.yaml
+Creating cluster "k8s-lab" ...
+ • Ensuring node image (kindest/node:v1.34.0) 🖼  ...
+ ✓ Ensuring node image (kindest/node:v1.34.0) 🖼
+ • Preparing nodes 📦 📦 📦   ...
+ ✓ Preparing nodes 📦 📦 📦 
+ • Writing configuration 📜  ...
+ ✓ Writing configuration 📜
+ • Starting control-plane 🕹️  ...
+ ✗ Starting control-plane 🕹️
+Deleted nodes: ["k8s-lab-control-plane" "k8s-lab-worker2" "k8s-lab-worker"]
+ERROR: failed to create cluster: failed to init node with kubeadm: command "docker exec --privileged k8s-lab-control-plane kubeadm init --config=/kind/kubeadm.conf --skip-token-print --v=6" failed with error: exit status 1
+
+Command Output: I1021 11:00:55.155723     219 initconfiguration.go:260] loading configuration from "/kind/kubeadm.conf"
+W1021 11:00:55.156532     219 common.go:100] your configuration file uses a deprecated API spec: "kubeadm.k8s.io/v1beta3" (kind: "ClusterConfiguration"). Please use 'kubeadm config migrate --old-config old-config-file --new-config new-config-file', which will write the new, similar spec using a newer API version.
+W1021 11:00:55.157064     219 common.go:100] your configuration file uses a deprecated API spec: "kubeadm.k8s.io/v1beta3" (kind: "InitConfiguration"). Please use 'kubeadm config migrate --old-config old-config-file --new-config new-config-file', which will write the new, similar spec using a newer API version.
+W1021 11:00:55.157493     219 common.go:100] your configuration file uses a deprecated API spec: "kubeadm.k8s.io/v1beta3" (kind: "JoinConfiguration"). Please use 'kubeadm config migrate --old-config old-config-file --new-config new-config-file', which will write the new, similar spec using a newer API version.
+W1021 11:00:55.157742     219 initconfiguration.go:361] [config] WARNING: Ignored configuration document with GroupVersionKind kubeadm.k8s.io/v1beta3, Kind=JoinConfiguration
+[init] Using Kubernetes version: v1.34.0
+[certs] Using certificateDir folder "/etc/kubernetes/pki"
+I1021 11:00:55.161742     219 certs.go:111] creating a new certificate authority for ca
+[certs] Generating "ca" certificate and key
+I1021 11:00:55.515572     219 certs.go:472] validating certificate period for ca certificate
+[certs] Generating "apiserver" certificate and key
+[certs] apiserver serving cert is signed for DNS names [k8s-lab-control-plane kubernetes kubernetes.default kubernetes.default.svc kubernetes.default.svc.cluster.local localhost] and IPs [10.96.0.1 172.18.0.2 127.0.0.1]
+[certs] Generating "apiserver-kubelet-client" certificate and key
+I1021 11:00:55.960891     219 certs.go:111] creating a new certificate authority for front-proxy-ca
+[certs] Generating "front-proxy-ca" certificate and key
+I1021 11:00:56.023293     219 certs.go:472] validating certificate period for front-proxy-ca certificate
+[certs] Generating "front-proxy-client" certificate and key
+I1021 11:00:56.367179     219 certs.go:111] creating a new certificate authority for etcd-ca
+[certs] Generating "etcd/ca" certificate and key
+I1021 11:00:56.704974     219 certs.go:472] validating certificate period for etcd/ca certificate
+[certs] Generating "etcd/server" certificate and key
+[certs] etcd/server serving cert is signed for DNS names [k8s-lab-control-plane localhost] and IPs [172.18.0.2 127.0.0.1 ::1]
+[certs] Generating "etcd/peer" certificate and key
+[certs] etcd/peer serving cert is signed for DNS names [k8s-lab-control-plane localhost] and IPs [172.18.0.2 127.0.0.1 ::1]
+[certs] Generating "etcd/healthcheck-client" certificate and key
+[certs] Generating "apiserver-etcd-client" certificate and key
+I1021 11:00:57.574790     219 certs.go:77] creating new public/private key files for signing service account users
+[certs] Generating "sa" key and public key
+[kubeconfig] Using kubeconfig folder "/etc/kubernetes"
+I1021 11:00:57.619988     219 kubeconfig.go:111] creating kubeconfig file for admin.conf
+[kubeconfig] Writing "admin.conf" kubeconfig file
+I1021 11:00:58.006144     219 kubeconfig.go:111] creating kubeconfig file for super-admin.conf
+[kubeconfig] Writing "super-admin.conf" kubeconfig file
+I1021 11:00:58.143544     219 kubeconfig.go:111] creating kubeconfig file for kubelet.conf
+[kubeconfig] Writing "kubelet.conf" kubeconfig file
+I1021 11:00:58.293536     219 kubeconfig.go:111] creating kubeconfig file for controller-manager.conf
+I1021 11:00:58.470130     219 kubeconfig.go:111] creating kubeconfig file for scheduler.conf
+[kubeconfig] Writing "controller-manager.conf" kubeconfig file
+[kubeconfig] Writing "scheduler.conf" kubeconfig file
+[etcd] Creating static Pod manifest for local etcd in "/etc/kubernetes/manifests"
+[control-plane] Using manifest folder "/etc/kubernetes/manifests"
+[control-plane] Creating static Pod manifest for "kube-apiserver"
+I1021 11:00:58.850615     219 local.go:67] [etcd] wrote Static Pod manifest for a local etcd member to "/etc/kubernetes/manifests/etcd.yaml"
+I1021 11:00:58.850695     219 manifests.go:125] [control-plane] getting StaticPodSpecs
+I1021 11:00:58.850970     219 certs.go:472] validating certificate period for CA certificate
+I1021 11:00:58.851063     219 manifests.go:151] [control-plane] adding volume "ca-certs" for component "kube-apiserver"
+I1021 11:00:58.851070     219 manifests.go:151] [control-plane] adding volume "etc-ca-certificates" for component "kube-apiserver"
+I1021 11:00:58.851075     219 manifests.go:151] [control-plane] adding volume "k8s-certs" for component "kube-apiserver"
+I1021 11:00:58.851080     219 manifests.go:151] [control-plane] adding volume "usr-local-share-ca-certificates" for component "kube-apiserver"
+I1021 11:00:58.851084     219 manifests.go:151] [control-plane] adding volume "usr-share-ca-certificates" for component "kube-apiserver"
+[control-plane] Creating static Pod manifest for "kube-controller-manager"
+I1021 11:00:58.852021     219 manifests.go:180] [control-plane] wrote static Pod manifest for component "kube-apiserver" to "/etc/kubernetes/manifests/kube-apiserver.yaml"
+I1021 11:00:58.852068     219 manifests.go:125] [control-plane] getting StaticPodSpecs
+I1021 11:00:58.852294     219 manifests.go:151] [control-plane] adding volume "ca-certs" for component "kube-controller-manager"
+I1021 11:00:58.852320     219 manifests.go:151] [control-plane] adding volume "etc-ca-certificates" for component "kube-controller-manager"
+I1021 11:00:58.852326     219 manifests.go:151] [control-plane] adding volume "flexvolume-dir" for component "kube-controller-manager"
+I1021 11:00:58.852330     219 manifests.go:151] [control-plane] adding volume "k8s-certs" for component "kube-controller-manager"
+I1021 11:00:58.852334     219 manifests.go:151] [control-plane] adding volume "kubeconfig" for component "kube-controller-manager"
+I1021 11:00:58.852339     219 manifests.go:151] [control-plane] adding volume "usr-local-share-ca-certificates" for component "kube-controller-manager"
+I1021 11:00:58.852343     219 manifests.go:151] [control-plane] adding volume "usr-share-ca-certificates" for component "kube-controller-manager"
+I1021 11:00:58.853204     219 manifests.go:180] [control-plane] wrote static Pod manifest for component "kube-controller-manager" to "/etc/kubernetes/manifests/kube-controller-manager.yaml"
+I1021 11:00:58.853246     219 manifests.go:125] [control-plane] getting StaticPodSpecs
+[control-plane] Creating static Pod manifest for "kube-scheduler"
+I1021 11:00:58.853430     219 manifests.go:151] [control-plane] adding volume "kubeconfig" for component "kube-scheduler"
+I1021 11:00:58.854091     219 manifests.go:180] [control-plane] wrote static Pod manifest for component "kube-scheduler" to "/etc/kubernetes/manifests/kube-scheduler.yaml"
+I1021 11:00:58.854132     219 kubelet.go:69] Stopping the kubelet
+[kubelet-start] Writing kubelet environment file with flags to file "/var/lib/kubelet/kubeadm-flags.env"
+[kubelet-start] Writing kubelet configuration to file "/var/lib/kubelet/instance-config.yaml"
+[patches] Applied patch of type "application/strategic-merge-patch+json" to target "kubeletconfiguration"
+[kubelet-start] Writing kubelet configuration to file "/var/lib/kubelet/config.yaml"
+[kubelet-start] Starting the kubelet
+I1021 11:00:59.034891     219 loader.go:402] Config loaded from file:  /etc/kubernetes/admin.conf
+I1021 11:00:59.035556     219 envvar.go:172] "Feature gate default state" feature="ClientsAllowCBOR" enabled=false
+I1021 11:00:59.035602     219 envvar.go:172] "Feature gate default state" feature="ClientsPreferCBOR" enabled=false
+I1021 11:00:59.035614     219 envvar.go:172] "Feature gate default state" feature="InOrderInformers" enabled=true
+I1021 11:00:59.035621     219 envvar.go:172] "Feature gate default state" feature="InformerResourceVersion" enabled=false
+I1021 11:00:59.035628     219 envvar.go:172] "Feature gate default state" feature="WatchListClient" enabled=false
+[wait-control-plane] Waiting for the kubelet to boot up the control plane as static Pods from directory "/etc/kubernetes/manifests"
+[kubelet-check] Waiting for a healthy kubelet at http://127.0.0.1:10248/healthz. This can take up to 4m0s
+[kubelet-check] The kubelet is healthy after 1.002511518s
+[control-plane-check] Waiting for healthy control plane components. This can take up to 4m0s
+[control-plane-check] Checking kube-apiserver at https://172.18.0.2:6443/livez
+[control-plane-check] Checking kube-controller-manager at https://127.0.0.1:10257/healthz
+[control-plane-check] Checking kube-scheduler at https://127.0.0.1:10259/livez
+I1021 11:01:00.046166     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=2
+I1021 11:01:00.546580     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:01.047011     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:01.545922     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:02.045901     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:02.546036     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:03.047148     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:03.546860     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:04.046225     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:04.545322     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:05.046164     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:05.545118     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:06.046277     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:06.547843     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=2
+I1021 11:01:07.046891     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:07.545184     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:08.045989     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:08.546625     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:09.046055     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:09.546203     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:10.046134     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:10.544957     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:11.046474     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:11.550952     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=6
+I1021 11:01:12.045172     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:12.545357     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:13.046619     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:13.545606     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:14.045841     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:14.546394     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:15.047030     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:15.546326     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:16.047383     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=2
+I1021 11:01:16.545026     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:17.045200     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:17.545566     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:18.045864     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:18.546875     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=2
+I1021 11:01:19.046941     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:19.546086     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:20.044859     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:20.545308     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:21.045632     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:21.545644     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:22.044662     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:22.546056     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:23.044790     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:23.546093     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:24.045974     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:24.546239     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:25.046307     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:25.545167     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:26.046104     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:26.545221     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:27.045312     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:27.546802     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=2
+I1021 11:01:28.045178     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:28.546107     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:29.046010     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:29.545318     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:30.045835     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:30.545057     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:31.046104     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:31.544858     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:32.046017     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:32.544777     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:33.046445     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:33.546475     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:34.045113     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:34.545916     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:35.045332     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:35.547135     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:36.044918     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:36.545853     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:37.049866     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:37.546228     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:38.046136     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:38.545625     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:39.045479     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:39.544659     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:40.046271     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:40.546141     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:41.045561     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:41.545299     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:42.045964     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:42.545416     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:43.044758     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:43.546359     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:44.045129     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:44.545781     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:45.044960     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:45.545309     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:46.045421     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:46.545789     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:47.046164     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:47.545895     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:48.045264     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:48.544743     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:49.045401     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:49.545185     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:50.045146     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:50.545927     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:51.046015     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:51.545761     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:52.045125     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:52.545112     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:53.045836     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:53.545543     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:54.045281     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:54.545190     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:55.044583     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:55.546083     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:56.048283     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=3
+I1021 11:01:56.545063     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:57.046108     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:01:57.545577     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:58.045272     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:58.545246     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:59.044704     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:01:59.545098     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:00.045886     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:00.545871     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:01.045007     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:01.545754     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:02.045000     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:02.544881     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:03.048407     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:03.545588     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:02:04.045253     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:04.545195     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:05.045177     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:05.545422     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:06.044752     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:06.545788     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:07.046282     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:02:07.546292     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:08.045646     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:08.544919     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:09.045419     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:09.545225     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:10.045591     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:10.545071     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:11.045798     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:11.545452     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:12.044790     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:12.545273     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:13.045539     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:13.545011     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:14.045606     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:14.546913     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:02:15.046586     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:15.544812     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:16.045187     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:16.545087     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:17.046474     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:17.544921     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:18.046199     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:02:18.546068     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:19.044681     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:19.545419     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:20.045320     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:20.544582     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:21.044931     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:21.545327     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:22.044660     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:22.545636     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:23.044509     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:23.546084     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:24.045454     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:24.544769     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:25.045808     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:25.546245     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:02:26.045943     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:26.544737     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:27.046287     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:27.544946     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:28.045371     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:28.544943     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:29.045883     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:29.545284     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:30.046556     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=2
+I1021 11:02:30.544587     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:31.048900     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:02:31.545140     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:32.046268     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:32.548589     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:33.047225     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:02:33.545537     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:34.046427     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:02:34.544579     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:35.045206     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:35.544490     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:36.045424     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:36.544655     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:37.045365     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:37.545525     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:38.044786     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:38.545463     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:39.044865     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:39.545523     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:40.044863     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:40.545108     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:41.045452     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:41.544923     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:42.045371     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:42.544783     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:43.045274     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:43.544840     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:44.044811     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:44.545294     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:45.045419     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:45.544744     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:46.045429     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:46.545032     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:47.045386     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:47.545668     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:48.045437     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:48.545206     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:49.045472     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:49.544616     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:50.044564     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:50.545153     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:51.044779     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:51.545311     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:52.045451     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:52.545058     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:53.045579     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:53.544556     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:54.047620     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=2
+I1021 11:02:54.544937     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:55.045818     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:55.549780     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:56.045520     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:56.545110     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:57.044967     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:57.545533     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:58.045363     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:58.545836     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:59.045276     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:02:59.546265     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:03:00.044858     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:00.545371     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:01.045462     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:03:01.544542     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:02.045276     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:02.544653     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:03.045278     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:03.546268     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:04.044648     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:04.545122     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:05.045749     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:05.544876     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:06.045928     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:06.544737     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:07.045287     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:07.544860     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:08.044926     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:08.545284     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:09.044796     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:09.545384     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:10.044938     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:10.545806     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:11.045255     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:11.544595     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:12.044918     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:12.544814     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:13.044896     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:13.545271     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:14.044780     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:14.545204     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:15.044957     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:15.544749     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:16.044954     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:16.545290     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:17.045821     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:17.546115     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:18.045293     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:18.544814     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:19.044993     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:19.544814     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:20.044832     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:20.545209     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:21.044777     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:21.544673     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:22.044842     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:22.544837     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:23.046231     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:23.546990     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:24.044764     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:24.545253     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:25.044623     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:25.544644     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:26.045623     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:26.544919     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:27.045710     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:27.544909     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:28.045440     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:28.544802     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:29.046048     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:29.545095     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:30.045496     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:30.544619     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:31.045031     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:31.545490     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:32.044811     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:32.545218     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:33.045325     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:33.545189     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:34.045628     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:34.544737     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:35.044689     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:35.544912     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:36.046525     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:03:36.544882     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:37.044832     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:37.545327     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:38.045764     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:38.545078     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:39.045677     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:39.544906     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:40.045306     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:40.544778     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:41.044839     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:41.544788     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:42.045353     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:42.549381     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=2
+I1021 11:03:43.046046     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:03:43.545360     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:44.046319     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:44.545314     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:45.044815     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:45.544846     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:46.045634     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:46.544575     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:47.045451     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:47.545282     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:48.044627     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:48.545127     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:49.045253     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:49.545111     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:50.044503     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:50.544952     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:51.045323     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:51.544664     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:52.045058     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:52.545107     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:53.044850     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:53.544843     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:54.044901     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:54.547372     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:55.044954     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:55.545005     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:56.045715     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:56.544711     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:57.045113     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:57.545713     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:58.044849     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:58.545656     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:59.044992     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:03:59.544904     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:00.045343     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:00.544788     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:01.044979     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:01.545840     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:02.045098     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:02.545196     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:03.045479     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:03.544794     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:04.044870     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:04.545556     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:05.044744     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:05.545112     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:06.045265     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:06.545176     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:07.048964     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:07.544857     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:08.044834     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:08.544749     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:09.044799     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:09.544913     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:10.044955     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:10.546117     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:11.045159     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:11.545372     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:12.045137     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:12.545196     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:13.045426     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:13.544711     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:14.044796     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:14.547546     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=2
+I1021 11:04:15.045025     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:15.544698     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:16.045636     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:16.544591     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:17.045235     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:17.544760     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:18.045550     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:18.544973     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:19.045466     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:19.544856     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:20.045179     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:20.544569     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:21.044654     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:21.545386     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:22.044937     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:22.544493     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:23.044807     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:23.544593     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:24.044750     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:24.544799     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:25.044956     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:25.545847     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:26.045166     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:26.544857     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:27.045680     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:27.544850     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:28.044960     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:28.545419     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:29.045091     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:29.544599     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:30.044563     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:30.544831     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:31.045481     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:31.544710     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:32.045907     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:32.544664     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:33.045187     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:33.545299     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:34.044864     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:34.545034     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:35.044987     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:35.545209     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:36.044927     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:36.545357     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:37.045384     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:37.545260     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:38.044743     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:38.545158     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:39.044778     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:39.545849     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:40.045541     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:40.544606     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:41.044877     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:41.545219     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:42.044542     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:42.544984     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:43.045293     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:43.544844     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:44.045300     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:44.545792     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:45.045949     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:45.544635     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:46.045925     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:46.545285     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:47.044689     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:47.545036     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:48.044803     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:48.545585     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:49.045001     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:49.545495     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:50.044751     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:50.546096     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:51.047317     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:04:51.544922     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:52.045729     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:52.544766     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:53.046165     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:04:53.545570     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=1
+I1021 11:04:54.044752     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:54.545093     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:55.045056     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:55.545347     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:56.044972     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:56.545319     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:57.044558     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:57.545413     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:58.045126     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:58.544801     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:59.045129     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+I1021 11:04:59.545312     219 round_trippers.go:632] "Response" verb="GET" url="https://k8s-lab-control-plane:6443/livez?timeout=10s" status="" milliseconds=0
+[control-plane-check] kube-apiserver is not healthy after 4m0.00080726s
+[control-plane-check] kube-scheduler is not healthy after 4m0.00106901s
+[control-plane-check] kube-controller-manager is not healthy after 4m0.000830598s
+
+A control plane component may have crashed or exited when started by the container runtime.
+To troubleshoot, list all containers using your preferred container runtimes CLI.
+Here is one example how you may list all running Kubernetes containers by using crictl:
+	- 'crictl --runtime-endpoint unix:///run/containerd/containerd.sock ps -a | grep kube | grep -v pause'
+	Once you have found the failing container, you can inspect its logs with:
+	- 'crictl --runtime-endpoint unix:///run/containerd/containerd.sock logs CONTAINERID'
+
+error: error execution phase wait-control-plane: failed while waiting for the control plane to start: [kube-apiserver check failed at https://172.18.0.2:6443/livez: client rate limiter Wait returned an error: rate: Wait(n=1) would exceed context deadline, kube-scheduler check failed at https://127.0.0.1:10259/livez: Get "https://127.0.0.1:10259/livez": dial tcp 127.0.0.1:10259: connect: connection refused, kube-controller-manager check failed at https://127.0.0.1:10257/healthz: Get "https://127.0.0.1:10257/healthz": dial tcp 127.0.0.1:10257: connect: connection refused]
+k8s.io/kubernetes/cmd/kubeadm/app/cmd/phases/workflow.(*Runner).Run.func1
+	k8s.io/kubernetes/cmd/kubeadm/app/cmd/phases/workflow/runner.go:262
+k8s.io/kubernetes/cmd/kubeadm/app/cmd/phases/workflow.(*Runner).visitAll
+	k8s.io/kubernetes/cmd/kubeadm/app/cmd/phases/workflow/runner.go:450
+k8s.io/kubernetes/cmd/kubeadm/app/cmd/phases/workflow.(*Runner).Run
+	k8s.io/kubernetes/cmd/kubeadm/app/cmd/phases/workflow/runner.go:234
+k8s.io/kubernetes/cmd/kubeadm/app/cmd.newCmdInit.func1
+	k8s.io/kubernetes/cmd/kubeadm/app/cmd/init.go:133
+github.com/spf13/cobra.(*Command).execute
+	github.com/spf13/cobra@v1.9.1/command.go:1015
+github.com/spf13/cobra.(*Command).ExecuteC
+	github.com/spf13/cobra@v1.9.1/command.go:1148
+github.com/spf13/cobra.(*Command).Execute
+	github.com/spf13/cobra@v1.9.1/command.go:1071
+k8s.io/kubernetes/cmd/kubeadm/app.Run
+	k8s.io/kubernetes/cmd/kubeadm/app/kubeadm.go:48
+main.main
+	k8s.io/kubernetes/cmd/kubeadm/kubeadm.go:25
+runtime.main
+	runtime/proc.go:283
+runtime.goexit
+	runtime/asm_amd64.s:1700
+
