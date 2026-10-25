@@ -1,0 +1,447 @@
+
+==================== Kubernetes cluster from the lab is running ====================
+
+ayush@ubuntu:~/k8s-lab$ kubectl config current-context
+kind-k8s-lab
+
+ayush@ubuntu:~/k8s-lab$ kind get clusters
+k8s-lab
+
+ayush@ubuntu:~/k8s-lab$ kubectl get nodes -o wide
+NAME                    STATUS   ROLES           AGE     VERSION   INTERNAL-IP   EXTERNAL-IP   OS-IMAGE                         KERNEL-VERSION    CONTAINER-RUNTIME
+k8s-lab-control-plane   Ready    control-plane   3m3s    v1.34.0   172.18.0.4    <none>        Debian GNU/Linux 12 (bookworm)   6.18.44-fc-v153   containerd://2.1.3
+k8s-lab-worker          Ready    <none>          2m50s   v1.34.0   172.18.0.2    <none>        Debian GNU/Linux 12 (bookworm)   6.18.44-fc-v153   containerd://2.1.3
+k8s-lab-worker2         Ready    <none>          2m50s   v1.34.0   172.18.0.3    <none>        Debian GNU/Linux 12 (bookworm)   6.18.44-fc-v153   containerd://2.1.3
+
+
+==================== Step 1 - The CampusConnect app from the Docker lab (7.1 / 7.2) ====================
+
+ayush@ubuntu:~$ mkdir -p ~/docker-lab/campusconnect && cd ~/docker-lab/campusconnect && pwd
+/home/ayush/docker-lab/campusconnect
+
+ayush@ubuntu:~/docker-lab/campusconnect$ echo "flask==3.0.3" > requirements.txt
+
+ayush@ubuntu:~/docker-lab/campusconnect$ ls -l
+total 12
+-rw-r--r-- 1 root root  158 Oct 25 14:00 Dockerfile.v1
+-rw-r--r-- 1 root root 1291 Oct 25 14:00 app.py
+-rw-r--r-- 1 root root   13 Oct 25 14:00 requirements.txt
+
+ayush@ubuntu:~/docker-lab/campusconnect$ cat requirements.txt
+flask==3.0.3
+
+ayush@ubuntu:~/docker-lab/campusconnect$ cat app.py
+import argparse, os, signal, socket, sys
+from flask import Flask, jsonify
+
+app = Flask(__name__)
+DATA_DIR = os.environ.get("DATA_DIR", "/data")
+COUNT_FILE = os.path.join(DATA_DIR, "visits.txt")
+APP_VERSION = os.environ.get("APP_VERSION", "v1")
+
+def read_count():
+    try:
+        with open(COUNT_FILE) as f:
+            return int(f.read().strip() or 0)
+    except FileNotFoundError:
+        return 0
+
+def write_count(n):
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(COUNT_FILE, "w") as f:
+        f.write(str(n))
+
+@app.route("/")
+def index():
+    n = read_count() + 1
+    write_count(n)
+    return jsonify(message="Hello from CampusConnect!", visits=n,
+                   hostname=socket.gethostname(), pid=os.getpid(),
+                   version=APP_VERSION)
+
+@app.route("/health")
+def health():
+    return jsonify(status="ok")
+
+def handle_sigterm(signum, frame):
+    print("Received SIGTERM - shutting down gracefully", flush=True)
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, handle_sigterm)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", type=int, default=8000)
+    args = parser.parse_args()
+    print(f"Starting CampusConnect {APP_VERSION} on port {args.port}", flush=True)
+    app.run(host="0.0.0.0", port=args.port)
+
+ayush@ubuntu:~/docker-lab/campusconnect$ cat Dockerfile.v1
+FROM python:3.12-slim
+WORKDIR /app
+COPY . .
+RUN pip install --no-cache-dir -r requirements.txt
+EXPOSE 8000
+CMD echo "Booting CampusConnect..."; python app.py
+
+
+==================== Step 2 - Build the image campusconnect:v1 ====================
+
+ayush@ubuntu:~/docker-lab/campusconnect$ docker build --network host --build-arg HTTPS_PROXY=$HTTPS_PROXY -t campusconnect:v1 -f Dockerfile.v1 . 2>&1 | grep -vi proxy
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile.v1
+#1 transferring dockerfile: 200B done
+#1 WARN: JSONArgsRecommended: JSON arguments recommended for CMD to prevent unintended behavior related to OS signals (line 6)
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/python:3.12-slim
+#2 DONE 0.0s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [internal] load build context
+#4 transferring context: 1.59kB done
+#4 DONE 0.0s
+
+#5 [1/4] FROM docker.io/library/python:3.12-slim@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704
+#5 resolve docker.io/library/python:3.12-slim@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704 0.0s done
+#5 extracting sha256:f2be67225471500c788ce88c597eb5ea8336e912ad1ca4815650e0281afe2034
+#5 extracting sha256:f2be67225471500c788ce88c597eb5ea8336e912ad1ca4815650e0281afe2034 2.8s done
+#5 DONE 2.9s
+
+#5 [1/4] FROM docker.io/library/python:3.12-slim@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704
+#5 extracting sha256:be6443c06d3c9914acdca3ffb368adad23d4f282b55e71e730878ad3e3c3f75c 0.1s done
+#5 extracting sha256:b524bb3aba7394d85233f3a0a742b8f1b56179e8f61492f73d42a1ff118623b7
+#5 extracting sha256:b524bb3aba7394d85233f3a0a742b8f1b56179e8f61492f73d42a1ff118623b7 0.4s done
+#5 DONE 3.4s
+
+#5 [1/4] FROM docker.io/library/python:3.12-slim@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704
+#5 extracting sha256:5c397e4307db7bd392eff1d36de88b04da2a137a4b906b7e0e4657bada560645 done
+#5 DONE 3.4s
+
+#6 [2/4] WORKDIR /app
+#6 DONE 0.1s
+
+#7 [3/4] COPY . .
+#7 DONE 0.0s
+
+#8 [4/4] RUN pip install --no-cache-dir -r requirements.txt
+#8 1.910 Collecting flask==3.0.3 (from -r requirements.txt (line 1))
+#8 2.202   Downloading flask-3.0.3-py3-none-any.whl.metadata (3.2 kB)
+#8 2.273 Collecting Werkzeug>=3.0.0 (from flask==3.0.3->-r requirements.txt (line 1))
+#8 2.309   Downloading werkzeug-3.1.9-py3-none-any.whl.metadata (4.1 kB)
+#8 2.359 Collecting Jinja2>=3.1.2 (from flask==3.0.3->-r requirements.txt (line 1))
+#8 2.392   Downloading jinja2-3.1.6-py3-none-any.whl.metadata (2.9 kB)
+#8 2.437 Collecting itsdangerous>=2.1.2 (from flask==3.0.3->-r requirements.txt (line 1))
+#8 2.470   Downloading itsdangerous-2.2.0-py3-none-any.whl.metadata (1.9 kB)
+#8 2.520 Collecting click>=8.1.3 (from flask==3.0.3->-r requirements.txt (line 1))
+#8 2.552   Downloading click-8.5.0-py3-none-any.whl.metadata (2.6 kB)
+#8 2.597 Collecting blinker>=1.6.2 (from flask==3.0.3->-r requirements.txt (line 1))
+#8 2.633   Downloading blinker-1.9.0-py3-none-any.whl.metadata (1.6 kB)
+#8 2.740 Collecting MarkupSafe>=2.0 (from Jinja2>=3.1.2->flask==3.0.3->-r requirements.txt (line 1))
+#8 2.775   Downloading markupsafe-3.0.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.7 kB)
+#8 2.835 Downloading flask-3.0.3-py3-none-any.whl (101 kB)
+#8 2.897 Downloading blinker-1.9.0-py3-none-any.whl (8.5 kB)
+#8 2.928 Downloading click-8.5.0-py3-none-any.whl (125 kB)
+#8 2.977 Downloading itsdangerous-2.2.0-py3-none-any.whl (16 kB)
+#8 3.009 Downloading jinja2-3.1.6-py3-none-any.whl (134 kB)
+#8 3.057 Downloading werkzeug-3.1.9-py3-none-any.whl (228 kB)
+#8 3.091 Downloading markupsafe-3.0.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (22 kB)
+#8 3.107 Installing collected packages: MarkupSafe, itsdangerous, click, blinker, Werkzeug, Jinja2, flask
+#8 3.475 Successfully installed Jinja2-3.1.6 MarkupSafe-3.0.4 Werkzeug-3.1.9 blinker-1.9.0 click-8.5.0 flask-3.0.3 itsdangerous-2.2.0
+#8 3.475 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+#8 3.887 
+#8 3.887 [notice] A new release of pip is available: 25.0.1 -> 26.2.2
+#8 3.887 [notice] To update, run: pip install --upgrade pip
+#8 DONE 4.0s
+
+#9 exporting to image
+#9 exporting layers
+#9 exporting layers 0.6s done
+#9 exporting manifest sha256:2c50b1782f5d2137396e1edd0d5a0f0f3cb5b2ea4dc938571a372ffb43365b91 done
+#9 exporting config sha256:70fe531daa2628f6a5e96d9cf9520041f9c47eca69eedfcd5f490d6e7e76a005 done
+#9 exporting attestation manifest sha256:07860e09950209a9ad6e1579b8af2d7a3e8e0f128455450878b8be5067edc42e done
+#9 exporting manifest list sha256:0d5f0992faf0e872378f20659d2564cf7c859a8e4e71281acee201d3ea596dca done
+#9 naming to docker.io/library/campusconnect:v1 done
+#9 unpacking to docker.io/library/campusconnect:v1
+#9 unpacking to docker.io/library/campusconnect:v1 0.2s done
+#9 DONE 0.8s
+
+ [33m1 warning found (use docker --debug to expand):
+[0m - JSONArgsRecommended: JSON arguments recommended for CMD to prevent unintended behavior related to OS signals (line 6)
+
+ayush@ubuntu:~/docker-lab/campusconnect$ docker images campusconnect
+IMAGE              ID             DISK USAGE   CONTENT SIZE   EXTRA
+campusconnect:v1   0d5f0992faf0        198MB         48.3MB        
+
+
+==================== Step 2 - Quick test with plain Docker ====================
+
+ayush@ubuntu:~/docker-lab/campusconnect$ docker run -d --name cc-v1 -p 8080:8000 campusconnect:v1
+ac82351e215c9d5e882ea984d43c338e240c7e1dc119448588fdd9cf7d34256b
+
+ayush@ubuntu:~/docker-lab/campusconnect$ curl -s http://localhost:8080/; echo
+{"hostname":"ac82351e215c","message":"Hello from CampusConnect!","pid":7,"version":"v1","visits":1}
+
+
+ayush@ubuntu:~/docker-lab/campusconnect$ curl -s http://localhost:8080/health; echo
+{"status":"ok"}
+
+
+ayush@ubuntu:~/docker-lab/campusconnect$ docker logs cc-v1
+Booting CampusConnect...
+Starting CampusConnect v1 on port 8000
+ * Serving Flask app 'app'
+ * Debug mode: off
+[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8000
+ * Running on http://172.17.0.2:8000
+[33mPress CTRL+C to quit[0m
+172.17.0.1 - - [25/Oct/2026 14:01:05] "GET / HTTP/1.1" 200 -
+172.17.0.1 - - [25/Oct/2026 14:01:05] "GET /health HTTP/1.1" 200 -
+
+ayush@ubuntu:~/docker-lab/campusconnect$ docker rm -f cc-v1
+cc-v1
+
+
+==================== Step 3 - Make the image available to the kind cluster ====================
+
+ayush@ubuntu:~/docker-lab/campusconnect$ kind load docker-image campusconnect:v1 --name k8s-lab
+Image: "campusconnect:v1" with ID "sha256:0d5f0992faf0e872378f20659d2564cf7c859a8e4e71281acee201d3ea596dca" not yet present on node "k8s-lab-worker", loading...
+Image: "campusconnect:v1" with ID "sha256:0d5f0992faf0e872378f20659d2564cf7c859a8e4e71281acee201d3ea596dca" not yet present on node "k8s-lab-control-plane", loading...
+Image: "campusconnect:v1" with ID "sha256:0d5f0992faf0e872378f20659d2564cf7c859a8e4e71281acee201d3ea596dca" not yet present on node "k8s-lab-worker2", loading...
+
+ayush@ubuntu:~/docker-lab/campusconnect$ docker exec k8s-lab-worker crictl images | grep -E 'IMAGE|campusconnect'
+IMAGE                                           TAG                  IMAGE ID            SIZE
+docker.io/library/campusconnect                 v1                   70fe531daa262       48.3MB
+
+ayush@ubuntu:~/docker-lab/campusconnect$ docker exec k8s-lab-worker2 crictl images | grep -E 'IMAGE|campusconnect'
+IMAGE                                           TAG                  IMAGE ID            SIZE
+docker.io/library/campusconnect                 v1                   70fe531daa262       48.3MB
+
+
+==================== Step 4 - Write deployment.yaml (Deployment + NodePort Service) ====================
+
+ayush@ubuntu:~/k8s-lab$ mkdir -p ~/k8s-lab/campusconnect && cd ~/k8s-lab/campusconnect && pwd
+/home/ayush/k8s-lab/campusconnect
+
+ayush@ubuntu:~/k8s-lab/campusconnect$ cat deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: campusconnect
+  labels:
+    app: campusconnect
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: campusconnect
+  template:
+    metadata:
+      labels:
+        app: campusconnect
+    spec:
+      containers:
+        - name: campusconnect
+          image: campusconnect:v1        # the image built in the Docker lab
+          imagePullPolicy: IfNotPresent  # use the copy loaded into the nodes
+          ports:
+            - containerPort: 8000        # EXPOSE 8000 in Dockerfile.v1
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "250m"
+              memory: "128Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: campusconnect
+spec:
+  type: NodePort
+  selector:
+    app: campusconnect
+  ports:
+    - protocol: TCP
+      port: 80          # the Service's port inside the cluster
+      targetPort: 8000  # the port the Flask app listens on
+      nodePort: 30001   # the port you type in your browser
+
+
+==================== Step 5 - Deploy and check the rollout ====================
+
+ayush@ubuntu:~/k8s-lab/campusconnect$ kubectl apply --dry-run=client -f deployment.yaml
+deployment.apps/campusconnect created (dry run)
+service/campusconnect created (dry run)
+
+ayush@ubuntu:~/k8s-lab/campusconnect$ kubectl apply -f deployment.yaml
+deployment.apps/campusconnect created
+service/campusconnect created
+
+ayush@ubuntu:~/k8s-lab/campusconnect$ kubectl rollout status deployment/campusconnect
+Waiting for deployment "campusconnect" rollout to finish: 0 of 2 updated replicas are available...
+Waiting for deployment "campusconnect" rollout to finish: 1 of 2 updated replicas are available...
+deployment "campusconnect" successfully rolled out
+
+ayush@ubuntu:~/k8s-lab/campusconnect$ kubectl get deployment,replicaset,pods -l app=campusconnect -o wide
+NAME                            READY   UP-TO-DATE   AVAILABLE   AGE   CONTAINERS      IMAGES             SELECTOR
+deployment.apps/campusconnect   2/2     2            2           7s    campusconnect   campusconnect:v1   app=campusconnect
+
+NAME                                      DESIRED   CURRENT   READY   AGE   CONTAINERS      IMAGES             SELECTOR
+replicaset.apps/campusconnect-c884f4cfb   2         2         2       7s    campusconnect   campusconnect:v1   app=campusconnect,pod-template-hash=c884f4cfb
+
+NAME                                READY   STATUS    RESTARTS   AGE   IP           NODE              NOMINATED NODE   READINESS GATES
+pod/campusconnect-c884f4cfb-4nlxj   1/1     Running   0          7s    10.244.1.2   k8s-lab-worker    <none>           <none>
+pod/campusconnect-c884f4cfb-9t8cg   1/1     Running   0          7s    10.244.2.2   k8s-lab-worker2   <none>           <none>
+
+ayush@ubuntu:~/k8s-lab/campusconnect$ kubectl get service campusconnect
+NAME            TYPE       CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+campusconnect   NodePort   10.96.104.91   <none>        80:30001/TCP   7s
+
+ayush@ubuntu:~/k8s-lab/campusconnect$ kubectl get endpoints campusconnect
+Warning: v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice
+NAME            ENDPOINTS                         AGE
+campusconnect   10.244.1.2:8000,10.244.2.2:8000   7s
+
+ayush@ubuntu:~/k8s-lab/campusconnect$ kubectl describe deployment campusconnect | tail -n 8
+  Available      True    MinimumReplicasAvailable
+  Progressing    True    NewReplicaSetAvailable
+OldReplicaSets:  <none>
+NewReplicaSet:   campusconnect-c884f4cfb (2/2 replicas created)
+Events:
+  Type    Reason             Age   From                   Message
+  ----    ------             ----  ----                   -------
+  Normal  ScalingReplicaSet  7s    deployment-controller  Scaled up replica set campusconnect-c884f4cfb from 0 to 2
+
+
+==================== Step 6 - Test the app from inside the cluster ====================
+
+ayush@ubuntu:~/k8s-lab/campusconnect$ kubectl run cc-client --rm -i --restart=Never --image=campusconnect:v1 --image-pull-policy=IfNotPresent --command -- python -c "import urllib.request as u; [print(u.urlopen('http://campusconnect/').read().decode().strip()) for _ in range(4)]; print(u.urlopen('http://campusconnect.default.svc.cluster.local/health').read().decode().strip())"
+{"hostname":"campusconnect-c884f4cfb-9t8cg","message":"Hello from CampusConnect!","pid":12,"version":"v1","visits":1}
+{"hostname":"campusconnect-c884f4cfb-9t8cg","message":"Hello from CampusConnect!","pid":12,"version":"v1","visits":2}
+{"hostname":"campusconnect-c884f4cfb-9t8cg","message":"Hello from CampusConnect!","pid":12,"version":"v1","visits":3}
+{"hostname":"campusconnect-c884f4cfb-4nlxj","message":"Hello from CampusConnect!","pid":11,"version":"v1","visits":1}
+{"status":"ok"}
+pod "cc-client" deleted from default namespace
+
+
+==================== Step 6 - Confirm the Service is reachable from outside (NodePort 30001) ====================
+
+ayush@ubuntu:~/k8s-lab/campusconnect$ for i in 1 2 3 4; do curl -s http://localhost:30001/; echo; done
+{"hostname":"campusconnect-c884f4cfb-4nlxj","message":"Hello from CampusConnect!","pid":11,"version":"v1","visits":2}
+
+{"hostname":"campusconnect-c884f4cfb-4nlxj","message":"Hello from CampusConnect!","pid":11,"version":"v1","visits":3}
+
+{"hostname":"campusconnect-c884f4cfb-4nlxj","message":"Hello from CampusConnect!","pid":11,"version":"v1","visits":4}
+
+{"hostname":"campusconnect-c884f4cfb-4nlxj","message":"Hello from CampusConnect!","pid":11,"version":"v1","visits":5}
+
+
+ayush@ubuntu:~/k8s-lab/campusconnect$ curl -s http://localhost:30001/health; echo
+{"status":"ok"}
+
+
+ayush@ubuntu:~/k8s-lab/campusconnect$ curl -s -o /dev/null -w "HTTP %{http_code}\n" http://localhost:30001/
+HTTP 200
+
+ayush@ubuntu:~/k8s-lab/campusconnect$ kubectl port-forward service/campusconnect 8085:80      # (second terminal)
+Forwarding from 127.0.0.1:8085 -> 8000
+ayush@ubuntu:~/k8s-lab/campusconnect$ curl -s http://localhost:8085/; echo
+Handling connection for 8085
+{"hostname":"campusconnect-c884f4cfb-9t8cg","message":"Hello from CampusConnect!","pid":12,"version":"v1","visits":5}
+
+
+^C
+
+ayush@ubuntu:~/k8s-lab/campusconnect$ kubectl logs deployment/campusconnect | head -n 12
+Found 2 pods, using pod/campusconnect-c884f4cfb-9t8cg
+Booting CampusConnect...
+Starting CampusConnect v1 on port 8000
+ * Serving Flask app 'app'
+ * Debug mode: off
+[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8000
+ * Running on http://10.244.2.2:8000
+[33mPress CTRL+C to quit[0m
+10.244.2.1 - - [25/Oct/2026 14:01:31] "GET /health HTTP/1.1" 200 -
+10.244.2.1 - - [25/Oct/2026 14:01:36] "GET /health HTTP/1.1" 200 -
+10.244.2.1 - - [25/Oct/2026 14:01:41] "GET /health HTTP/1.1" 200 -
+
+
+==================== Extra - Scale to 3 replicas ====================
+
+ayush@ubuntu:~/k8s-lab/campusconnect$ kubectl scale deployment campusconnect --replicas=3
+deployment.apps/campusconnect scaled
+
+ayush@ubuntu:~/k8s-lab/campusconnect$ kubectl rollout status deployment/campusconnect
+Waiting for deployment "campusconnect" rollout to finish: 2 of 3 updated replicas are available...
+deployment "campusconnect" successfully rolled out
+
+ayush@ubuntu:~/k8s-lab/campusconnect$ kubectl get pods -l app=campusconnect -o wide
+NAME                            READY   STATUS    RESTARTS   AGE   IP           NODE              NOMINATED NODE   READINESS GATES
+campusconnect-c884f4cfb-4nlxj   1/1     Running   0          42s   10.244.1.2   k8s-lab-worker    <none>           <none>
+campusconnect-c884f4cfb-9t8cg   1/1     Running   0          42s   10.244.2.2   k8s-lab-worker2   <none>           <none>
+campusconnect-c884f4cfb-rzdfp   1/1     Running   0          3s    10.244.1.4   k8s-lab-worker    <none>           <none>
+
+ayush@ubuntu:~/k8s-lab/campusconnect$ kubectl get endpoints campusconnect
+Warning: v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice
+NAME            ENDPOINTS                                         AGE
+campusconnect   10.244.1.2:8000,10.244.1.4:8000,10.244.2.2:8000   42s
+
+
+==================== Extra - Delete a Pod and watch Kubernetes replace it ====================
+
+ayush@ubuntu:~/k8s-lab/campusconnect$ kubectl delete pod campusconnect-c884f4cfb-4nlxj
+pod "campusconnect-c884f4cfb-4nlxj" deleted from default namespace
+
+ayush@ubuntu:~/k8s-lab/campusconnect$ kubectl get pods -l app=campusconnect -o wide
+NAME                            READY   STATUS    RESTARTS   AGE   IP           NODE              NOMINATED NODE   READINESS GATES
+campusconnect-c884f4cfb-9t8cg   1/1     Running   0          79s   10.244.2.2   k8s-lab-worker2   <none>           <none>
+campusconnect-c884f4cfb-rzdfp   1/1     Running   0          40s   10.244.1.4   k8s-lab-worker    <none>           <none>
+campusconnect-c884f4cfb-smd88   1/1     Running   0          37s   10.244.2.3   k8s-lab-worker2   <none>           <none>
+
+ayush@ubuntu:~/k8s-lab/campusconnect$ curl -s -o /dev/null -w "HTTP %{http_code}\n" http://localhost:30001/
+HTTP 200
+
+ayush@ubuntu:~/k8s-lab/campusconnect$ kubectl get events --field-selector involvedObject.kind=Pod --sort-by=.lastTimestamp | grep campusconnect | tail -n 6
+39s         Normal   Created     pod/campusconnect-c884f4cfb-rzdfp   Created container: campusconnect
+37s         Normal   Pulled      pod/campusconnect-c884f4cfb-smd88   Container image "campusconnect:v1" already present on machine
+37s         Normal   Created     pod/campusconnect-c884f4cfb-smd88   Created container: campusconnect
+37s         Normal   Started     pod/campusconnect-c884f4cfb-smd88   Started container campusconnect
+37s         Normal   Scheduled   pod/campusconnect-c884f4cfb-smd88   Successfully assigned default/campusconnect-c884f4cfb-smd88 to k8s-lab-worker2
+37s         Normal   Killing     pod/campusconnect-c884f4cfb-4nlxj   Stopping container campusconnect
+
+
+==================== Cleanup ====================
+
+ayush@ubuntu:~/k8s-lab/campusconnect$ kubectl delete -f deployment.yaml
+deployment.apps "campusconnect" deleted from default namespace
+service "campusconnect" deleted from default namespace
+
+ayush@ubuntu:~/k8s-lab/campusconnect$ kubectl get all
+NAME                                READY   STATUS        RESTARTS   AGE
+pod/campusconnect-c884f4cfb-9t8cg   1/1     Terminating   0          84s
+pod/campusconnect-c884f4cfb-rzdfp   1/1     Terminating   0          45s
+pod/campusconnect-c884f4cfb-smd88   1/1     Terminating   0          42s
+
+NAME                 TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+service/kubernetes   ClusterIP   10.96.0.1    <none>        443/TCP   5m1s
+
+ayush@ubuntu:~/k8s-lab/campusconnect$ kubectl get all
+NAME                 TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+service/kubernetes   ClusterIP   10.96.0.1    <none>        443/TCP   5m37s
+
